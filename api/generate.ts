@@ -40,16 +40,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       photoBase64,
     } = body || {};
 
-    if (!variation) {
-      return res.status(400).json({ error: { message: 'Variation details required' } });
-    }
+    const safeVariation: Variation = variation || {
+      index: Number(index) || 1,
+      name: `Design Concept #${index || 1}`,
+      description: 'Lightweight fine jewellery wire structure with sparkling diamond accents.',
+      motifTreatment: motif || 'Fine jewellery motif',
+      stoneCount: Number(diamondCount) || 10,
+      stoneLayout: `${diamondCount || 10} round diamonds in setting`,
+      setting: clusterRhodiumFill ? 'Tight cluster with rhodium gap fill' : 'Prong',
+      sizeMm: '16 x 6',
+      goldVsOriginal: 'about the same',
+      imagePrompt: `Fine jewellery design sketch of concept #${index || 1} with ${diamondCount || 10} diamonds.`,
+    };
 
     const imageModel = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2.5-sunburst';
     const size = (process.env.IMAGE_SIZE as any) || '1024x1024';
     const quality = (qualityParam || process.env.IMAGE_QUALITY || 'medium') as Quality;
 
-    const count = diamondCount || variation.stoneCount || 10;
-    const prompt = buildImagePrompt(variation as Variation, count, motif, clusterRhodiumFill, headShapeVariance);
+    const count = Number(diamondCount) || safeVariation.stoneCount || 10;
+    const prompt = buildImagePrompt(safeVariation, count, motif, clusterRhodiumFill, headShapeVariance);
 
     const cleanBase64 = photoBase64 ? photoBase64.replace(/^data:image\/[a-z]+;base64,/, '') : '';
 

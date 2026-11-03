@@ -92,7 +92,7 @@ export const App: React.FC = () => {
 
   // 2. Generate a single card's image
   const generateSingleCard = async (
-    jobId: string,
+    targetJob: StudioJob,
     index: number,
     quality?: 'low' | 'medium' | 'high'
   ): Promise<boolean> => {
@@ -105,22 +105,25 @@ export const App: React.FC = () => {
       ),
     }));
 
-    const currentVar = job?.variations.find((v) => v.index === index);
+    const activeJob = jobRef.current || targetJob;
+    const currentVar =
+      targetJob.variations.find((v) => v.index === index) ||
+      activeJob?.variations.find((v) => v.index === index);
 
     try {
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({
-          jobId,
+          jobId: targetJob.jobId,
           index,
-          quality,
+          quality: quality || targetJob.quality,
           variation: currentVar,
-          diamondCount: job?.diamondCount,
-          motif: job?.original?.motif,
-          clusterRhodiumFill: job?.clusterRhodiumFill,
-          headShapeVariance: job?.headShapeVariance,
-          photoBase64: job?.photoBase64 || job?.photoUrl,
+          diamondCount: targetJob.diamondCount,
+          motif: targetJob.original?.motif,
+          clusterRhodiumFill: targetJob.clusterRhodiumFill,
+          headShapeVariance: targetJob.headShapeVariance,
+          photoBase64: targetJob.photoBase64 || targetJob.photoUrl,
         }),
       });
 
@@ -138,14 +141,24 @@ export const App: React.FC = () => {
       }
 
       const updatedVar: Variation = {
-        ...currentVar!,
+        ...(currentVar || {
+          index,
+          name: `Design #${index}`,
+          description: '',
+          stoneCount: targetJob.diamondCount,
+          stoneLayout: '',
+          setting: '',
+          sizeMm: '',
+          goldVsOriginal: '',
+          imagePrompt: '',
+        }),
         status: 'done' as const,
         imageBase64: data.imageBase64,
         errorMessage: undefined,
       };
 
       // Save design directly to Supabase server history
-      saveDesignToSupabase(jobId, updatedVar).catch((e) =>
+      saveDesignToSupabase(targetJob.jobId, updatedVar).catch((e) =>
         console.warn('Supabase design save note:', e)
       );
 
@@ -154,6 +167,7 @@ export const App: React.FC = () => {
           v.index === index ? updatedVar : v
         );
         const updatedJob = { ...current, variations: updatedVariations };
+        jobRef.current = updatedJob;
 
         // Check if all are done to trigger celebratory confetti
         const allDone = updatedVariations.every((v) => v.status === 'done');
@@ -193,13 +207,13 @@ export const App: React.FC = () => {
   };
 
   // 3. Concurrency Queue (Runs cards concurrently)
-  const runParallelGenerations = async (jobId: string, indexes: number[], quality: 'low' | 'medium' | 'high') => {
+  const runParallelGenerations = async (targetJob: StudioJob, indexes: number[], quality: 'low' | 'medium' | 'high') => {
     const queue = [...indexes];
     const workers = Array.from({ length: Math.min(MAX_PARALLEL, queue.length) }, async () => {
       while (queue.length > 0) {
         const targetIndex = queue.shift();
         if (targetIndex !== undefined) {
-          await generateSingleCard(jobId, targetIndex, quality);
+          await generateSingleCard(targetJob, targetIndex, quality);
         }
       }
     });
@@ -255,6 +269,7 @@ export const App: React.FC = () => {
         createdAt: Date.now(),
       };
 
+      jobRef.current = newJob;
       setJob(newJob);
       await saveActiveJob(newJob);
 
@@ -269,7 +284,7 @@ export const App: React.FC = () => {
 
       // Kick off parallel image generation for all 50 cards
       const indexesToGenerate = initialVariations.map((v) => v.index);
-      runParallelGenerations(newJob.jobId, indexesToGenerate, quality);
+      runParallelGenerations(newJob, indexesToGenerate, quality);
     } catch (err: any) {
       console.error('Analysis error:', err);
       addToast('error', err.message || 'An unexpected error occurred during analysis.');
@@ -280,9 +295,10 @@ export const App: React.FC = () => {
 
   // 5. Card actions
   const handleRegenerateCard = (index: number) => {
-    if (!job) return;
+    const activeJob = jobRef.current || job;
+    if (!activeJob) return;
     addToast('info', `Regenerating sketch for variation #${index}...`);
-    generateSingleCard(job.jobId, index, job.quality);
+    generateSingleCard(activeJob, index, activeJob.quality);
   };
 
   const handleToggleStar = (index: number) => {
