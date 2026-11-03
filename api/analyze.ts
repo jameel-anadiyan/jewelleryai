@@ -1,22 +1,167 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import crypto from 'crypto';
-import {
-  OriginalAnalysis,
-  Variation,
-  getAnalysisSystemPrompt,
-  getOpenAI,
-  withRetry,
-} from './_shared.js';
+import 'dotenv/config';
+import OpenAI from 'openai';
 
 export const config = {
   maxDuration: 60,
 };
 
+export interface Variation {
+  index: number;
+  name: string;
+  description: string;
+  motifTreatment?: string;
+  stoneCount: number;
+  stoneLayout: string;
+  setting: string;
+  sizeMm: string;
+  goldVsOriginal: string;
+  imagePrompt: string;
+}
+
+export interface OriginalAnalysis {
+  productType: string;
+  metal: string;
+  motif: string;
+  stoneCount: number;
+  stoneLayout: string;
+  summary: string;
+}
+
+let openaiClient: OpenAI | null = null;
+
+function getOpenAI(customKey?: string): OpenAI {
+  const apiKey =
+    customKey ||
+    process.env.OPENAI_API_KEY ||
+    process.env.VITE_OPENAI_API_KEY;
+
+  if (!apiKey) {
+    throw new Error(
+      'OPENAI_API_KEY is missing. Please add OPENAI_API_KEY in Vercel Environment Variables, or click "OpenAI Key" in the top bar to set it.'
+    );
+  }
+
+  if (customKey) {
+    return new OpenAI({
+      apiKey: customKey,
+      timeout: 120000,
+    });
+  }
+
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey,
+      timeout: 120000,
+    });
+  }
+  return openaiClient;
+}
+
+async function withRetry<T>(name: string, fn: () => Promise<T>, maxRetries = 2): Promise<T> {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      attempt++;
+      if (attempt > maxRetries) {
+        console.error(`[Retry Failed] ${name} failed after ${maxRetries + 1} attempts`);
+        throw err;
+      }
+      const delay = Math.pow(2, attempt) * 1000;
+      console.warn(`[Retry Warning] ${name} attempt ${attempt} failed (${err.message}). Retrying in ${delay}ms...`);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+}
+
+function safeParseJson(raw: string): any {
+  const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+  return JSON.parse(cleaned);
+}
+
+function getAnalysisSystemPrompt(
+  count: number,
+  batch: 1 | 2 = 1,
+  clusterRhodiumFill = false,
+  headShapeVariance = false
+): string {
+  const isCluster =
+    clusterRhodiumFill === true ||
+    (clusterRhodiumFill as any) === 'true' ||
+    (clusterRhodiumFill as any) === 1 ||
+    (clusterRhodiumFill as any) === '1';
+
+  const isHeadVariance =
+    headShapeVariance === true ||
+    (headShapeVariance as any) === 'true' ||
+    (headShapeVariance as any) === 1 ||
+    (headShapeVariance as any) === '1';
+
+  const clusterRhodiumInstruction = isCluster
+    ? `\n\n*** CRITICAL MANDATORY REQUIREMENT - TIGHT CLUSTER & WHITE RHODIUM GAP FILL ***:
+The user has enabled Close Cluster & Rhodium Gap Fill.
+For EVERY SINGLE variation:
+1. The stones MUST be seated closely nearby like a tight cluster or in a line cluster, feeling and appearing as one single unified diamond surface.
+2. stoneLayout MUST specify: "Tight cluster of ${count} diamonds seated closely together with white rhodium filling all diamond gaps" or "Dense continuous line cluster with high-polish white rhodium gap fill".
+3. setting MUST be: "Tight cluster with high-polish white rhodium plating filling all diamond gaps" or "Tight line cluster with bright-cut micro-prongs and rhodium fill".
+4. imagePrompt MUST describe: "The ${count} diamonds are set close together in a dense cluster / line cluster with bright-cut white rhodium plating filling every gap between stones, creating the visual appearance of one solid, gapless, brilliant diamond surface."
+Do NOT spread or scatter diamonds individually across open wire.`
+    : '';
+
+  const headShapeVarianceInstruction = isHeadVariance
+    ? `\n\n*** CRITICAL 40%-50% HEAD SHAPE DIVERGENCE ***:
+The head / centerpiece motif outline and silhouette MUST have a 40% to 50% geometric shape difference from the reference photo and across variations. Substantially transform the physical shape and contour of the head/cluster (for example, morphing a rounded or oval head into an angular geometric hexagon, an elongated marquise/navette apex, an asymmetric fluid petal curve, a pointed chevron crest, an open teardrop halo, or an interlocking crossover head) while strictly retaining the exact ${count} diamonds and lightweight wire construction.`
+    : '';
+
+  const startIndex = batch === 1 ? 1 : 26;
+  const endIndex = batch === 1 ? 25 : 50;
+  const batchTheme =
+    batch === 1
+      ? 'Focus on delicate, classic, romantic, and organic interpretations of the motif with graceful wire curves.'
+      : 'Focus on bold geometric, contemporary, architectural, asymmetric, and sculpted modern wirework interpretations.';
+
+  return `You are a senior master fine-jewellery designer for SWA Diamonds. You receive one product photo and its exact diamond count per piece: ${count}.
+
+MOTIF LOCK (follow strictly):
+1. Name the reference's core motif in a few words (e.g. "heart / love", "infinity", "flower", "butterfly", "star and moon", "leaf", "knot", "crossline X", "geometric square"). List signature details in original.motif.
+2. All variations MUST stay in that motif family, so a customer recognises each one as the same theme at a glance.
+3. Change how the motif is drawn: outline or pavé-filled, single or paired or interlocked, upright or tilted, open or closed, rounded or geometric, inside a loop or standing alone.
+4. Keep the original's signature details wherever they fit.
+5. Never add motifs from other themes.
+6. For each variation, describe its specific interpretation in motifTreatment.
+7. Return exactly 25 distinct variations numbered from ${startIndex} to ${endIndex}. ${batchTheme}
+
+Rules for every variation:
+- EXACTLY ${count} diamonds per piece, all the same size as the original. No extra accent stones.
+- Lightweight: thin wire (about 1.0-1.2 mm), open and airy shapes, no heavy solid metal.
+- Same design family: same mood and proportions, two-tone if the original is two-tone.
+- Original designs only: no brand look-alikes, no logos or text.${clusterRhodiumInstruction}${headShapeVarianceInstruction}
+
+For each variation, return:
+- index: integer (${startIndex} to ${endIndex})
+- name: 2-3 words distinctive jewellery name
+- description: max 2 sentences describing the design concept
+- motifTreatment: one line on how this design interprets the motif
+- stoneCount: must equal ${count}
+- stoneLayout: exact placement of every stone
+- setting: prong, bezel, channel, pave, micro-prong, etc.
+- sizeMm: estimated dimensions e.g. 18 x 6
+- goldVsOriginal: lighter, about the same, or more
+- imagePrompt: detailed visual prompt for sketch generator
+
+Return JSON matching:
+${batch === 1 ? 'original: { productType, metal, motif, stoneCount, stoneLayout, summary },' : ''}
+variations: [ array of 25 design objects ]`;
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-app-password');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-openai-key, x-app-password');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -37,7 +182,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       stoneSize = '',
       metal = 'same',
       mustKeep = '',
-      quality = 'medium',
       clusterRhodiumFill = false,
       headShapeVariance = false,
     } = body || {};
@@ -118,7 +262,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
       const content = response.choices[0]?.message?.content;
       if (!content) throw new Error('No content returned for batch 1');
-      return JSON.parse(content);
+      return safeParseJson(content);
     };
 
     const fetchBatch2 = async () => {
@@ -133,7 +277,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
       const content = response.choices[0]?.message?.content;
       if (!content) throw new Error('No content returned for batch 2');
-      return JSON.parse(content);
+      return safeParseJson(content);
     };
 
     const [data1, data2] = await withRetry('analyze50Variations', () => Promise.all([fetchBatch1(), fetchBatch2()]));
@@ -220,11 +364,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       sku,
       clusterRhodiumFill: isClusterRhodium,
       headShapeVariance: isHeadVariance,
-    });
-      countFor,
-      sku,
-      clusterRhodiumFill,
-      headShapeVariance,
     });
   } catch (err: any) {
     console.error('[API analyze Error]', err);

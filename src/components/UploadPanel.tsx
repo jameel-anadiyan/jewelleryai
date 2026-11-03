@@ -93,16 +93,11 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({ onStartAnalysis, isLoa
 
   const compressImageIfNeeded = async (file: File): Promise<File> => {
     return new Promise((resolve) => {
-      // If file is small, keep original
-      if (file.size <= 2 * 1024 * 1024) {
-        return resolve(file);
-      }
-
       const img = new Image();
       const objectUrl = URL.createObjectURL(file);
       img.onload = () => {
         URL.revokeObjectURL(objectUrl);
-        const maxDim = 1600;
+        const maxDim = 1024;
         let { width, height } = img;
         if (width > maxDim || height > maxDim) {
           if (width > height) {
@@ -131,7 +126,7 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({ onStartAnalysis, isLoa
             resolve(optimizedFile);
           },
           'image/jpeg',
-          0.85
+          0.82
         );
       };
       img.onerror = () => {
