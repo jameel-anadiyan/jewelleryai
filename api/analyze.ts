@@ -54,6 +54,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const perPieceCount = countFor === 'pair' ? Math.max(1, Math.round(diamondCount / 2)) : diamondCount;
     const textModel = process.env.OPENAI_TEXT_MODEL || 'gpt-4o-mini';
 
+    const isClusterRhodium =
+      clusterRhodiumFill === true ||
+      (clusterRhodiumFill as any) === 'true' ||
+      (clusterRhodiumFill as any) === 1 ||
+      (clusterRhodiumFill as any) === '1';
+
+    const isHeadVariance =
+      headShapeVariance === true ||
+      (headShapeVariance as any) === 'true' ||
+      (headShapeVariance as any) === 1 ||
+      (headShapeVariance as any) === '1';
+
     const customKey =
       (req.headers['x-openai-key'] as string) ||
       body?.openaiApiKey ||
@@ -61,11 +73,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const openai = getOpenAI(customKey);
 
-    const clusterRhodiumNote = clusterRhodiumFill
-      ? ' MANDATORY SETTING: Diamonds seated closely in a tight cluster or line cluster, white rhodium filling diamond gaps seamlessly as one unified diamond surface.'
+    const clusterRhodiumNote = isClusterRhodium
+      ? ' MANDATORY REQUIREMENT: Close Cluster & White Rhodium Gap Fill is ENABLED. All diamonds must sit together in a tight cluster or line cluster with high-polish white rhodium seamlessly filling diamond gaps into one continuous diamond surface.'
       : '';
 
-    const headShapeVarianceNote = headShapeVariance
+    const headShapeVarianceNote = isHeadVariance
       ? ' MANDATORY SETTING: 40%-50% geometric shape difference in the head silhouette across designs.'
       : '';
 
@@ -98,7 +110,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const response = await openai.chat.completions.create({
         model: textModel,
         messages: [
-          { role: 'system', content: getAnalysisSystemPrompt(perPieceCount, 1, clusterRhodiumFill, headShapeVariance) },
+          { role: 'system', content: getAnalysisSystemPrompt(perPieceCount, 1, isClusterRhodium, isHeadVariance) },
           { role: 'user', content: userPromptBatch1 },
         ],
         response_format: { type: 'json_object' },
@@ -113,7 +125,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const response = await openai.chat.completions.create({
         model: textModel,
         messages: [
-          { role: 'system', content: getAnalysisSystemPrompt(perPieceCount, 2, clusterRhodiumFill, headShapeVariance) },
+          { role: 'system', content: getAnalysisSystemPrompt(perPieceCount, 2, isClusterRhodium, isHeadVariance) },
           { role: 'user', content: userPromptBatch2 },
         ],
         response_format: { type: 'json_object' },
@@ -141,18 +153,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const combinedRaw = [...list1, ...list2];
 
     // Ensure we have 50 variations with proper indices and defaults
-    const finalVariations: Variation[] = combinedRaw.slice(0, 50).map((v, i) => ({
-      index: i + 1,
-      name: v.name || `Design Concept ${i + 1}`,
-      description: v.description || 'Lightweight fine jewellery wire structure with sparkling diamond accents.',
-      motifTreatment: v.motifTreatment || original.motif || '',
-      stoneCount: perPieceCount,
-      stoneLayout: v.stoneLayout || `${perPieceCount} round diamonds in refined wire setting`,
-      setting: v.setting || (clusterRhodiumFill ? 'Tight cluster / line cluster with rhodium fill' : 'Prong'),
-      sizeMm: v.sizeMm || '16 x 6',
-      goldVsOriginal: v.goldVsOriginal || 'about the same',
-      imagePrompt: v.imagePrompt || `Fine jewellery sketch of ${v.name || 'ring'} with ${perPieceCount} diamonds.`,
-    }));
+    const finalVariations: Variation[] = combinedRaw.slice(0, 50).map((v, i) => {
+      const stoneLayout = isClusterRhodium
+        ? (v.stoneLayout?.toLowerCase().includes('cluster')
+            ? v.stoneLayout
+            : `Tight cluster of ${perPieceCount} diamonds seated closely together with white rhodium filling diamond gaps`)
+        : (v.stoneLayout || `${perPieceCount} round diamonds in setting`);
+
+      const setting = isClusterRhodium
+        ? (v.setting?.toLowerCase().includes('rhodium')
+            ? v.setting
+            : 'Tight cluster with high-polish white rhodium gap fill')
+        : (v.setting || 'Prong');
+
+      const imagePrompt = isClusterRhodium
+        ? (v.imagePrompt?.toLowerCase().includes('rhodium')
+            ? v.imagePrompt
+            : `${v.imagePrompt || `Fine jewellery design #${i + 1}`} The ${perPieceCount} diamonds are set close together in a dense cluster with bright-cut white rhodium plating filling every gap between stones, creating one continuous diamond surface.`)
+        : (v.imagePrompt || `Fine jewellery sketch of ${v.name || 'piece'} with ${perPieceCount} diamonds.`);
+
+      return {
+        index: i + 1,
+        name: v.name || `Design Concept ${i + 1}`,
+        description: v.description || 'Lightweight fine jewellery wire structure with sparkling diamond accents.',
+        motifTreatment: v.motifTreatment || original.motif || '',
+        stoneCount: perPieceCount,
+        stoneLayout,
+        setting,
+        sizeMm: v.sizeMm || '16 x 6',
+        goldVsOriginal: v.goldVsOriginal || 'about the same',
+        imagePrompt,
+      };
+    });
 
     // If fewer than 50 were returned by the LLM, synthesize remaining to guarantee 50
     while (finalVariations.length < 50) {
@@ -163,11 +195,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         description: `Fluid geometric wire variation interpreting the ${original.motif || 'core'} motif.`,
         motifTreatment: `Modern wire accent ${idx}`,
         stoneCount: perPieceCount,
-        stoneLayout: `${perPieceCount} round diamonds placed along the curve`,
-        setting: clusterRhodiumFill ? 'Tight cluster with rhodium gap fill' : 'Micro-prong',
+        stoneLayout: isClusterRhodium
+          ? `Tight cluster of ${perPieceCount} diamonds with white rhodium gap fill`
+          : `${perPieceCount} round diamonds placed along the curve`,
+        setting: isClusterRhodium
+          ? 'Tight cluster with white rhodium gap fill'
+          : 'Micro-prong',
         sizeMm: '16 x 5',
         goldVsOriginal: 'lighter',
-        imagePrompt: `Professional fine jewellery design sketch of ${original.motif} with ${perPieceCount} round brilliant diamonds.`,
+        imagePrompt: isClusterRhodium
+          ? `Professional fine jewellery design sketch of ${original.motif} with ${perPieceCount} round diamonds in a dense cluster setting filled with bright-cut white rhodium.`
+          : `Professional fine jewellery design sketch of ${original.motif} with ${perPieceCount} round brilliant diamonds.`,
       });
     }
 
@@ -178,6 +216,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       original,
       variations: finalVariations,
       diamondCount: perPieceCount,
+      countFor,
+      sku,
+      clusterRhodiumFill: isClusterRhodium,
+      headShapeVariance: isHeadVariance,
+    });
       countFor,
       sku,
       clusterRhodiumFill,

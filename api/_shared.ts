@@ -77,12 +77,32 @@ export function getAnalysisSystemPrompt(
   clusterRhodiumFill = false,
   headShapeVariance = false
 ): string {
-  const clusterRhodiumInstruction = clusterRhodiumFill
-    ? `\n   - CRITICAL STONE SETTING & RHODIUM GAP FILL: The diamonds must be seated closely nearby like a tight cluster or in a line cluster, feeling and appearing as one continuous diamond surface. The stones must be set in high-polish white rhodium plating with bright-cut micro-prongs to seamlessly fill all diamond gaps between stones, making the rhodium and diamonds blend into a unified, gapless cluster part.`
+  const isCluster =
+    clusterRhodiumFill === true ||
+    (clusterRhodiumFill as any) === 'true' ||
+    (clusterRhodiumFill as any) === 1 ||
+    (clusterRhodiumFill as any) === '1';
+
+  const isHeadVariance =
+    headShapeVariance === true ||
+    (headShapeVariance as any) === 'true' ||
+    (headShapeVariance as any) === 1 ||
+    (headShapeVariance as any) === '1';
+
+  const clusterRhodiumInstruction = isCluster
+    ? `\n\n*** CRITICAL MANDATORY REQUIREMENT - TIGHT CLUSTER & WHITE RHODIUM GAP FILL ***:
+The user has enabled Close Cluster & Rhodium Gap Fill.
+For EVERY SINGLE variation:
+1. The stones MUST be seated closely nearby like a tight cluster or in a line cluster, feeling and appearing as one single unified diamond surface.
+2. stoneLayout MUST specify: "Tight cluster of ${count} diamonds seated closely together with white rhodium filling all diamond gaps" or "Dense continuous line cluster with high-polish white rhodium gap fill".
+3. setting MUST be: "Tight cluster with high-polish white rhodium plating filling all diamond gaps" or "Tight line cluster with bright-cut micro-prongs and rhodium fill".
+4. imagePrompt MUST describe: "The ${count} diamonds are set close together in a dense cluster / line cluster with bright-cut white rhodium plating filling every gap between stones, creating the visual appearance of one solid, gapless, brilliant diamond surface."
+Do NOT spread or scatter diamonds individually across open wire.`
     : '';
 
-  const headShapeVarianceInstruction = headShapeVariance
-    ? `\n   - CRITICAL 40%-50% HEAD SHAPE DIVERGENCE: The head / centerpiece motif outline and silhouette MUST have a 40% to 50% geometric shape difference from the reference photo and across variations. Substantially transform the physical shape and contour of the head/cluster (for example, morphing a rounded or oval head into an angular geometric hexagon, an elongated marquise/navette apex, an asymmetric fluid petal curve, a pointed chevron crest, an open teardrop halo, or an interlocking crossover head) while strictly retaining the exact ${count} diamonds and lightweight wire construction.`
+  const headShapeVarianceInstruction = isHeadVariance
+    ? `\n\n*** CRITICAL 40%-50% HEAD SHAPE DIVERGENCE ***:
+The head / centerpiece motif outline and silhouette MUST have a 40% to 50% geometric shape difference from the reference photo and across variations. Substantially transform the physical shape and contour of the head/cluster (for example, morphing a rounded or oval head into an angular geometric hexagon, an elongated marquise/navette apex, an asymmetric fluid petal curve, a pointed chevron crest, an open teardrop halo, or an interlocking crossover head) while strictly retaining the exact ${count} diamonds and lightweight wire construction.`
     : '';
 
   const startIndex = batch === 1 ? 1 : 26;
@@ -133,24 +153,44 @@ export function buildImagePrompt(
   clusterRhodiumFill = false,
   headShapeVariance = false
 ): string {
-  const clusterRhodiumText = clusterRhodiumFill
-    ? ` Stone arrangement: The stones must be seated closely nearby like a tight cluster or in a line cluster. The diamonds are set in bright-cut white rhodium plating designed to seamlessly fill all diamond gaps, making the diamonds and rhodium feel like one unified diamond cluster part.`
+  const isCluster =
+    clusterRhodiumFill === true ||
+    (clusterRhodiumFill as any) === 'true' ||
+    (clusterRhodiumFill as any) === 1 ||
+    (clusterRhodiumFill as any) === '1';
+
+  const isHeadVariance =
+    headShapeVariance === true ||
+    (headShapeVariance as any) === 'true' ||
+    (headShapeVariance as any) === 1 ||
+    (headShapeVariance as any) === '1';
+
+  const clusterHeader = isCluster
+    ? `MANDATORY STONE SETTING REQUIREMENT: All ${count} round diamonds MUST be set tightly grouped together in a dense cluster or dense continuous line cluster. High-polish bright white rhodium plating seamlessly fills every gap between stones, making the diamonds and rhodium blend into one unified, gapless, radiant diamond cluster surface. Do NOT scatter or spread diamonds individually across open wire.\n`
     : '';
 
-  const headShapeText = headShapeVariance
-    ? ` Head / Centerpiece Shape: Feature a distinct 40%-50% geometric shape difference in the head silhouette compared to conventional forms (e.g. bold geometric contour, asymmetric petal contour, pointed navette/chevron apex, or sculpted open loop).`
+  const headShapeHeader = isHeadVariance
+    ? `HEAD SILHOUETTE DIVERGENCE: Substantially transform the centerpiece head outline with 40%-50% geometric shape difference (angular hexagonal contour, fluid petal curve, pointed navette/chevron apex, or sculpted open loop) while retaining lightweight wire construction.\n`
     : '';
 
   const cleanMotif = motif.trim() || 'original jewellery motif';
   const cleanTreatment = variation.motifTreatment?.trim() || variation.name;
 
-  return `Use the attached product photo as the reference for scale, metal colours and design family. Draw ONE new jewellery design.
-Motif: ${cleanMotif}. Keep it instantly recognisable in this design (${cleanTreatment}). Do not add any other motif.
+  const stoneLayoutText = isCluster
+    ? `All ${count} diamonds grouped closely in a tight cluster or dense continuous line cluster with high-polish white rhodium filling diamond gaps seamlessly.`
+    : variation.stoneLayout;
+
+  const settingText = isCluster
+    ? `Tight cluster setting with bright-cut white rhodium plating seamlessly filling all diamond gaps into one continuous diamond surface.`
+    : variation.setting;
+
+  return `${clusterHeader}${headShapeHeader}Jewellery design sketch: Draw ONE new fine jewellery piece in the SWA Diamonds design family.
+Motif: ${cleanMotif} (${cleanTreatment}). Keep the motif theme instantly recognisable.
 Design: ${variation.name} - ${variation.description}
-Details: ${variation.imagePrompt}${headShapeText}
-Stones: EXACTLY ${count} round brilliant diamonds, laid out as: ${variation.stoneLayout}.${clusterRhodiumText} Draw every diamond clearly with facet lines so each one can be counted. No other stones.
-Setting: ${variation.setting}.${clusterRhodiumFill ? ' Stones seated in tight cluster or line cluster with white rhodium filling diamond gaps.' : ''} Lightweight construction in thin wire.
-Style: professional jewellery design sketch, fine pencil and ink lines on white paper with soft watercolour shading in gold and white gold. Same viewing angle as the reference photo. One design only, centred, plain white background, no text, no hands, no props.`;
+Details: ${variation.imagePrompt}
+Stones: EXACTLY ${count} round brilliant diamonds. Layout: ${stoneLayoutText}. Draw every diamond facet clearly with fine lines so each stone can be counted. No other stones.
+Setting: ${settingText} Lightweight construction in thin gold wire (~1.0-1.2 mm).
+Style: Professional high-end fine jewellery presentation sketch, fine pencil and ink lines on white paper with soft watercolour shading in gold and white rhodium. Centred, plain white background, single piece, no hands, no props, no text.`;
 }
 
 export async function withRetry<T>(name: string, fn: () => Promise<T>, maxRetries = 2): Promise<T> {
