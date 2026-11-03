@@ -10,25 +10,25 @@ export const CostEstimator: React.FC<CostEstimatorProps> = ({ quality }) => {
     switch (quality) {
       case 'low':
         return {
-          total: '~$0.15',
+          total: '~$0.07',
           perImage: '~$0.007',
-          speed: 'Fast (30-60 secs)',
-          label: '20 Draft Concepts',
+          speed: 'Fast (15-25 secs)',
+          label: '10 Draft Concepts',
         };
       case 'high':
         return {
-          total: '~$3.80',
+          total: '~$1.90',
           perImage: '~$0.19',
-          speed: 'Ultra CAD detail (2-3 mins)',
-          label: '20 Presentation Sketches',
+          speed: 'Ultra CAD detail (1-2 mins)',
+          label: '10 Presentation Sketches',
         };
       case 'medium':
       default:
         return {
-          total: '~$1.00 – $1.20',
+          total: '~$0.55 – $0.65',
           perImage: '~$0.055',
-          speed: 'Standard (1-2 mins)',
-          label: '20 Studio Concepts',
+          speed: 'Standard (20-40 secs)',
+          label: '10 Studio Concepts',
         };
     }
   };
@@ -39,7 +39,7 @@ export const CostEstimator: React.FC<CostEstimatorProps> = ({ quality }) => {
     <div className="flex items-center space-x-2 text-xs py-1.5 px-3 rounded-lg bg-zinc-900/80 border border-zinc-800 text-zinc-300">
       <div className="flex items-center text-gold-400 font-semibold space-x-0.5">
         <DollarSign className="w-3.5 h-3.5" />
-        <span>Estimated Cost (20 Designs):</span>
+        <span>Estimated Cost (10 Designs):</span>
       </div>
       <span className="font-mono text-gold-300 font-bold">{cost.total}</span>
       <span className="text-zinc-500">•</span>

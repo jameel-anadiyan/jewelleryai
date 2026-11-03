@@ -19,7 +19,7 @@ import {
 import { downloadZip } from './services/export';
 import { syncRunToSupabase, saveDesignToSupabase } from './services/supabase';
 
-const MAX_PARALLEL = 4;
+const MAX_PARALLEL = 5;
 
 export const App: React.FC = () => {
   const [job, setJob] = useState<StudioJob | null>(null);

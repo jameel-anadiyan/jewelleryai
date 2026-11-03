@@ -49,7 +49,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   SWA DIAMONDS
                 </span>
                 <span className="text-[10px] tracking-widest uppercase px-2 py-0.5 rounded-full bg-gold-500/15 border border-gold-500/30 text-gold-300 font-semibold">
-                  Studio 20
+                  Studio 10
                 </span>
               </div>
               <p className="text-xs text-zinc-400 font-light tracking-wide">

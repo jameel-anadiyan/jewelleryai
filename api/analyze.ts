@@ -84,7 +84,6 @@ function safeParseJson(raw: string): any {
 
 function getAnalysisSystemPrompt(
   count: number,
-  batch: 1 | 2 = 1,
   clusterRhodiumFill = false,
   headShapeVariance = false
 ): string {
@@ -105,37 +104,47 @@ function getAnalysisSystemPrompt(
     : '';
 
   const headShapeVarianceInstruction = isHeadVariance
-    ? `\n   - CRITICAL 40%-50% HEAD SHAPE DIVERGENCE: The head / centerpiece motif outline and silhouette MUST have a 40% to 50% geometric shape difference from the reference photo and across the variations. Substantially transform the physical shape and contour of the head/cluster (for example, morphing a rounded or oval head into an angular geometric hexagon, an elongated marquise/navette apex, an asymmetric fluid petal curve, a pointed chevron crest, an open teardrop halo, or an interlocking crossover head) while strictly retaining the exact ${count} diamonds and lightweight wire construction.`
+    ? `\n   - CRITICAL 40%-50% HEAD SHAPE DIVERGENCE: The head / centerpiece motif outline and silhouette MUST have a 40% to 50% geometric shape difference from the reference photo and across the 10 variations. Substantially transform the physical shape and contour of the head/cluster (for example, morphing a rounded or oval head into an angular geometric hexagon, an elongated marquise/navette apex, an asymmetric fluid petal curve, a pointed chevron crest, an open teardrop halo, or an interlocking crossover head) while strictly retaining the exact ${count} diamonds and lightweight wire construction.`
     : '';
-
-  const startIndex = batch === 1 ? 1 : 11;
-  const endIndex = batch === 1 ? 10 : 20;
 
   return `You are a senior fine-jewellery designer for SWA Diamonds. You receive one product photo and its exact diamond count per piece: ${count}.
 
-MOTIF LOCK (follow strictly):
-1. Before designing, name the reference's core motif in a few words, for example "heart / love", "infinity", "flower", "butterfly", "evil eye", "star and moon", "leaf", "knot", "crossline X" or "geometric square". Also list its signature details, such as an open outline, a bypass band, a two-tone split or crossing lines. Return this in original.motif.
-2. All variations MUST stay in that motif family, so a customer recognises each one as the same theme at a glance:
-   - Love or heart: every design is heart-based. Examples: open heart, double or interlocked hearts, heart inside a loop, tilted heart, heart with an arrow, heart knot, two half-hearts meeting.
-   - Infinity: every design is infinity-based. Examples: classic infinity, double or stacked infinity, infinity with a small heart, twisted-ribbon infinity, infinity knot, open-ended infinity.
-   - Any other motif: use the same approach. Vary the interpretation; never swap the theme.
-3. Change how the motif is drawn, not what it is: outline or pavé-filled, single or paired or interlocked, upright or tilted, open or closed, rounded or geometric, inside a loop or standing alone, or combined with the original construction (bypass, crossover, spiral).
-4. Keep the original's signature details wherever they fit, so the set still feels related to it.
-5. Never add motifs from other themes. No flowers, stars, butterflies or letters unless the reference already has them.
-6. If the reference mixes two motifs (for example heart and infinity), keep both in every design, or keep the main one dominant in every design.
-7. For each variation, describe its specific interpretation in motifTreatment (one line on how this design interprets the motif).
-8. Before answering, check each variation: does it read as the same motif at a glance, and does it have exactly ${count} stones? Replace any that fail.
-9. Return exactly 10 distinct variations numbered from ${startIndex} to ${endIndex}.
+MOTIF LOCK & COMPLETE DIVERSITY (follow strictly):
+1. Before designing, name the reference's core motif in a few words, for example "heart / love", "infinity", "flower", "butterfly", "evil eye", "star and moon", "leaf", "knot", "crossline X" or "geometric square". Also list its signature details. Return this in original.motif.
+2. Return EXACTLY 10 distinct, production-viable variations numbered 1 to 10.
+3. CRITICAL REQUIREMENT — DO NOT REPEAT THE SAME DESIGN:
+   Every single variation MUST have a distinctly different shape, wireframe structure, and silhouette so no two cards look alike! Spread the 10 designs across these 10 distinct architectural forms:
+   - Design 1: Minimalist Solitary Contour (sleek fluid wire silhouette with focal cluster)
+   - Design 2: Asymmetric Bypass Wrap (sweeping bypass band crossing around the center)
+   - Design 3: Angular Geometric Frame (crisp hexagonal or faceted octagonal architectural head)
+   - Design 4: Open Organic Petals (delicate openwork wire petal silhouette)
+   - Design 5: Elongated Navette / Marquise (slender tapered pointed apex contour)
+   - Design 6: Twisted Crossover / Infinity Ribbon (interlocking dual-wire weave)
+   - Design 7: Pointed Chevron Crest (sculpted V-crest cathedral cluster)
+   - Design 8: Open Teardrop Loop (graceful asymmetric pear halo contour)
+   - Design 9: Diagonal Tension Arch (open split-shank with cluster suspended diagonally)
+   - Design 10: Dynamic Spiral Wave (multi-level swirling contour with fluid motion)
+4. Original designs only: no brand look-alikes, no logos or text.
 
 Rules for every variation:
 - EXACTLY ${count} diamonds per piece, all the same size as the original. No extra accent stones. No coloured stones unless the original has them.
 - Lightweight: thin wire (about 1.0-1.2 mm), open and airy shapes, no heavy solid metal.
-- Same design family: same mood and proportions, two-tone if the original is two-tone, same band or earring-back type.
-- Original designs only: no brand look-alikes, no logos or text.${clusterRhodiumInstruction}${headShapeVarianceInstruction}
+- Same design family: same mood and proportions, two-tone if the original is two-tone, same band or earring-back type.${clusterRhodiumInstruction}${headShapeVarianceInstruction}
 
-For each variation return: name (2-3 words), description (max 2 sentences), motifTreatment (one line explaining how this design interprets the motif), stoneCount (must equal ${count}), stoneLayout (where each stone sits), setting, sizeMm (estimate), goldVsOriginal (lighter, about the same or more), and imagePrompt (a vivid visual description of the design for an image model).
-Return only JSON that matches the schema:
-${batch === 1 ? 'original: { productType, metal, motif, stoneCount, stoneLayout, summary },' : ''}
+For each variation return:
+- index: integer (1 to 10)
+- name: 2-3 words distinctive jewellery name matching its specific archetype
+- description: max 2 sentences describing the design concept and its unique shape
+- motifTreatment: one line explaining how this design interprets the motif
+- stoneCount: must equal ${count}
+- stoneLayout: exact placement of every stone in this specific design
+- setting: cluster with rhodium gap fill, prong, bezel, channel, micro-prong, etc.
+- sizeMm: estimated dimensions e.g. 18 x 6
+- goldVsOriginal: lighter, about the same, or more
+- imagePrompt: vivid visual description detailing its specific unique construction, wire curves, and stone placement
+
+Return only JSON matching:
+original: { productType, metal, motif, stoneCount, stoneLayout, summary },
 variations: [ array of 10 design objects ]`;
 }
 
@@ -215,56 +224,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
     };
 
-    const userPromptBatch1 = [
+    const userPrompt = [
       {
         type: 'text' as const,
-        text: `Analyze this reference jewellery item. Diamond count per piece: ${perPieceCount} (total entered: ${diamondCount}, for: ${countFor}). SKU: ${sku || 'None'}. Stone size: ${stoneSize || 'estimate'}. Metal request: ${metal || 'same as photo'}. Must keep: ${mustKeep || 'none'}.${clusterRhodiumNote}${headShapeVarianceNote} Generate original summary and variations 1 to 10. Return valid JSON.`,
+        text: `Analyze this reference jewellery item. Diamond count per piece: ${perPieceCount} (total entered: ${diamondCount}, for: ${countFor}). SKU: ${sku || 'None'}. Stone size: ${stoneSize || 'estimate'}. Metal request: ${metal || 'same as photo'}. Must keep: ${mustKeep || 'none'}.${clusterRhodiumNote}${headShapeVarianceNote} Generate original summary and 10 completely distinct, non-repeating design variations (1 to 10). Return valid JSON.`,
       },
       imagePart,
     ];
 
-    const userPromptBatch2 = [
-      {
-        type: 'text' as const,
-        text: `Based on this reference jewellery item with diamond count per piece: ${perPieceCount}. Metal: ${metal || 'same'}.${clusterRhodiumNote}${headShapeVarianceNote} Generate variations 11 to 20 exploring creative wirework and silhouette interpretations. Return valid JSON.`,
-      },
-      imagePart,
-    ];
-
-    // Execute both batches in parallel (10 items each = 20 total) for ultra-fast generation
-    const fetchBatch1 = async () => {
+    // Single fast request returning all 10 distinct variations in ~3 seconds
+    const fetchAnalysis = async () => {
       const response = await openai.chat.completions.create({
         model: textModel,
         messages: [
-          { role: 'system', content: getAnalysisSystemPrompt(perPieceCount, 1, isClusterRhodium, isHeadVariance) },
-          { role: 'user', content: userPromptBatch1 },
-        ],
-        response_format: { type: 'json_object' },
-        temperature: 0.7,
-      });
-      const content = response.choices[0]?.message?.content;
-      if (!content) throw new Error('No content returned for batch 1');
-      return safeParseJson(content);
-    };
-
-    const fetchBatch2 = async () => {
-      const response = await openai.chat.completions.create({
-        model: textModel,
-        messages: [
-          { role: 'system', content: getAnalysisSystemPrompt(perPieceCount, 2, isClusterRhodium, isHeadVariance) },
-          { role: 'user', content: userPromptBatch2 },
+          { role: 'system', content: getAnalysisSystemPrompt(perPieceCount, isClusterRhodium, isHeadVariance) },
+          { role: 'user', content: userPrompt },
         ],
         response_format: { type: 'json_object' },
         temperature: 0.75,
       });
       const content = response.choices[0]?.message?.content;
-      if (!content) throw new Error('No content returned for batch 2');
+      if (!content) throw new Error('No content returned from analysis model');
       return safeParseJson(content);
     };
 
-    const [data1, data2] = await withRetry('analyze20Variations', () => Promise.all([fetchBatch1(), fetchBatch2()]));
+    const data = await withRetry('analyze10Variations', fetchAnalysis);
 
-    const original: OriginalAnalysis = data1.original || {
+    const original: OriginalAnalysis = data.original || {
       productType: 'Jewellery',
       metal: 'Gold',
       motif: 'Fine Jewellery Motif',
@@ -273,13 +259,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       summary: `Fine jewellery piece with ${perPieceCount} diamonds.`,
     };
 
-    const list1: any[] = Array.isArray(data1.variations) ? data1.variations : [];
-    const list2: any[] = Array.isArray(data2.variations) ? data2.variations : [];
+    const rawList: any[] = Array.isArray(data.variations) ? data.variations : [];
 
-    const combinedRaw = [...list1, ...list2];
-
-    // Ensure we have exactly 20 variations with proper indices and defaults
-    const finalVariations: Variation[] = combinedRaw.slice(0, 20).map((v, i) => {
+    // Ensure we have exactly 10 variations with proper indices and defaults
+    const finalVariations: Variation[] = rawList.slice(0, 10).map((v, i) => {
       const stoneLayout = isClusterRhodium
         ? (v.stoneLayout?.toLowerCase().includes('cluster')
             ? v.stoneLayout
@@ -312,26 +295,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       };
     });
 
-    // If fewer than 20 were returned by the LLM, synthesize remaining to guarantee 20
-    while (finalVariations.length < 20) {
+    // If fewer than 10 were returned by the LLM, synthesize remaining to guarantee 10
+    const archetypes = [
+      { name: 'Minimalist Solitary Contour', desc: 'Clean fluid wire silhouette with focal cluster' },
+      { name: 'Asymmetric Bypass Wrap', desc: 'Sweeping bypass band crossing around the center' },
+      { name: 'Angular Geometric Frame', desc: 'Crisp hexagonal architectural head frame' },
+      { name: 'Open Floral Petals', desc: 'Delicate openwork wire petal silhouette' },
+      { name: 'Elongated Navette Apex', desc: 'Slender tapered pointed apex contour' },
+      { name: 'Twisted Crossover Ribbon', desc: 'Interlocking dual-wire weave construction' },
+      { name: 'Pointed Chevron Crest', desc: 'Sculpted V-crest cathedral cluster' },
+      { name: 'Open Teardrop Loop', desc: 'Graceful asymmetric pear halo contour' },
+      { name: 'Diagonal Tension Arch', desc: 'Open split-shank with cluster suspended diagonally' },
+      { name: 'Dynamic Spiral Wave', desc: 'Multi-level swirling contour with fluid motion' },
+    ];
+
+    while (finalVariations.length < 10) {
       const idx = finalVariations.length + 1;
+      const arc = archetypes[(idx - 1) % archetypes.length];
       finalVariations.push({
         index: idx,
-        name: `Silhouette Accent ${idx}`,
-        description: `Fluid wire variation interpreting the ${original.motif || 'core'} motif.`,
-        motifTreatment: `Modern wire accent ${idx}`,
+        name: `${arc.name} #${idx}`,
+        description: `${arc.desc} interpreting the ${original.motif || 'core'} motif.`,
+        motifTreatment: `${arc.name} variation`,
         stoneCount: perPieceCount,
         stoneLayout: isClusterRhodium
           ? `Tight cluster of ${perPieceCount} diamonds with white rhodium gap fill`
-          : `${perPieceCount} round diamonds placed along the curve`,
+          : `${perPieceCount} round diamonds placed in ${arc.name.toLowerCase()}`,
         setting: isClusterRhodium
           ? 'Tight cluster with white rhodium gap fill'
           : 'Micro-prong',
         sizeMm: '16 x 5',
         goldVsOriginal: 'lighter',
         imagePrompt: isClusterRhodium
-          ? `Professional fine jewellery design sketch of ${original.motif} with ${perPieceCount} round diamonds in a dense cluster setting filled with bright-cut white rhodium.`
-          : `Professional fine jewellery design sketch of ${original.motif} with ${perPieceCount} round brilliant diamonds.`,
+          ? `Professional fine jewellery design sketch of ${arc.name} with ${perPieceCount} round diamonds in a dense cluster setting filled with bright-cut white rhodium.`
+          : `Professional fine jewellery design sketch of ${arc.name} with ${perPieceCount} round brilliant diamonds.`,
       });
     }
 

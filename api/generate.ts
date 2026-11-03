@@ -101,12 +101,12 @@ function buildImagePrompt(
   const cleanMotif = (motif || '').trim() || 'original jewellery motif';
   const cleanTreatment = (variation.motifTreatment || '').trim() || variation.name;
 
-  return `Use the attached product photo as the reference for scale, metal colours and design family. Draw ONE new jewellery design.
+  return `Use the attached product photo as the reference for scale, metal colours and design family. Draw ONE new jewellery design that is clearly distinct and unique.
 Motif: ${cleanMotif}. Keep it instantly recognisable in this design (${cleanTreatment}). Do not add any other motif.
 Design: ${variation.name} - ${variation.description}
-Details: ${variation.imagePrompt}${headShapeText}
-Stones: EXACTLY ${count} round brilliant diamonds, laid out as: ${variation.stoneLayout}.${clusterRhodiumText} Draw every diamond clearly with facet lines so each one can be counted. No other stones.
-Setting: ${variation.setting}.${isCluster ? ' Stones seated in tight cluster or line cluster with white rhodium filling diamond gaps.' : ''} Lightweight construction in thin wire.
+Distinctive Shape & Architecture: ${variation.imagePrompt}${headShapeText}
+Stones: EXACTLY ${count} round brilliant diamonds, uniquely arranged as: ${variation.stoneLayout}.${clusterRhodiumText} Draw every diamond clearly with facet lines so each one can be counted. No other stones.
+Setting: ${variation.setting}.${isCluster ? ' Stones seated in tight cluster or line cluster with white rhodium filling diamond gaps.' : ''} Lightweight construction in thin wire (~1.0-1.2 mm).
 Style: professional jewellery design sketch, fine pencil and ink lines on white paper with soft watercolour shading in gold and white gold. Same viewing angle as the reference photo. One design only, centred, plain white background, no text, no hands, no props.`;
 }
 
@@ -166,7 +166,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       imagePrompt: `Fine jewellery design sketch of concept #${index || 1} with ${diamondCount || 10} diamonds.`,
     };
 
-    const imageModel = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2.5-sunburst';
+    // Use fast gpt-image-2.5-flare by default for responsive generation; sunburst for high quality
+    const defaultModel = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2.5-flare';
+    const imageModel = qualityParam === 'high' ? 'gpt-image-2.5-sunburst' : defaultModel;
     const size = (process.env.IMAGE_SIZE as any) || '1024x1024';
 
     const count = Number(diamondCount) || safeVariation.stoneCount || 10;
@@ -220,11 +222,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         throw new Error('Images API response contained neither b64_json nor URL');
       } catch (err: any) {
         console.warn(`[Generate Warning] Model ${imageModel} error: ${err.message}. Retrying fallback...`);
+        const fallbackModel = imageModel === 'gpt-image-2.5-flare' ? 'gpt-image-2.5-sunburst' : 'gpt-image-2.5-flare';
         if (cleanBase64) {
           const buffer = Buffer.from(cleanBase64, 'base64');
           const file = await toFile(buffer, 'reference_photo.png', { type: 'image/png' });
           const flareResponse = await openai.images.edit({
-            model: 'gpt-image-2.5-flare',
+            model: fallbackModel,
             image: file,
             prompt,
             size,
@@ -239,7 +242,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
         } else {
           const flareResponse = await openai.images.generate({
-            model: 'gpt-image-2.5-flare',
+            model: fallbackModel,
             prompt,
             size,
           });
