@@ -8,8 +8,22 @@ import {
 } from 'lucide-react';
 import { CostEstimator } from './CostEstimator';
 
+export interface AnalysisRequestPayload {
+  photoBase64: string;
+  mimeType: string;
+  diamondCount: number;
+  countFor: 'piece' | 'pair';
+  sku: string;
+  stoneSize: string;
+  metal: string;
+  mustKeep: string;
+  quality: 'low' | 'medium' | 'high';
+  clusterRhodiumFill: boolean;
+  headShapeVariance: boolean;
+}
+
 interface UploadPanelProps {
-  onStartAnalysis: (formData: FormData, previewUrl: string) => Promise<void>;
+  onStartAnalysis: (payload: AnalysisRequestPayload, previewUrl: string) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -128,6 +142,15 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({ onStartAnalysis, isLoa
     });
   };
 
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!photo) {
@@ -143,20 +166,24 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({ onStartAnalysis, isLoa
     setErrorMessage('');
 
     const optimizedPhoto = await compressImageIfNeeded(photo);
+    const photoBase64 = await fileToBase64(optimizedPhoto);
 
-    const formData = new FormData();
-    formData.append('image', optimizedPhoto);
-    formData.append('diamondCount', String(countNumber));
-    formData.append('countFor', countFor);
-    formData.append('sku', sku.trim());
-    formData.append('stoneSize', stoneSize.trim());
-    formData.append('metal', metal);
-    formData.append('mustKeep', mustKeep.trim());
-    formData.append('quality', quality);
-    formData.append('clusterRhodiumFill', String(clusterRhodiumFill));
-    formData.append('headShapeVariance', String(headShapeVariance));
-
-    await onStartAnalysis(formData, photoPreview);
+    await onStartAnalysis(
+      {
+        photoBase64,
+        mimeType: optimizedPhoto.type || 'image/jpeg',
+        diamondCount: countNumber,
+        countFor,
+        sku: sku.trim(),
+        stoneSize: stoneSize.trim(),
+        metal,
+        mustKeep: mustKeep.trim(),
+        quality,
+        clusterRhodiumFill,
+        headShapeVariance,
+      },
+      photoPreview
+    );
   };
 
   // Load a demo sample photo
@@ -240,7 +267,7 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({ onStartAnalysis, isLoa
           Jewellery Variation Studio
         </h1>
         <p className="text-sm sm:text-base text-zinc-400 max-w-2xl mx-auto leading-relaxed">
-          Upload a master jewellery piece, specify the stone count, and receive 10 new, production-viable concepts with full CAD specifications and high-resolution pencil sketches.
+          Upload a master jewellery piece, specify the stone count, and receive 50 new, production-viable concepts with full CAD specifications and high-resolution pencil sketches.
         </p>
       </div>
 
@@ -589,7 +616,7 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({ onStartAnalysis, isLoa
                 <div className="mt-2.5 p-2.5 rounded-lg bg-zinc-950/80 border border-blue-500/30 text-[11px] text-blue-200 flex items-start space-x-2">
                   <Sparkles className="w-3.5 h-3.5 text-blue-400 mt-0.5 flex-shrink-0" />
                   <span>
-                    <strong>Added to AI Prompt:</strong> "The head / centerpiece motif outline and silhouette must have a 40% to 50% geometric shape difference from the reference photo and across the 10 variations, while strictly retaining the exact diamond count and lightweight wire construction."
+                    <strong>Added to AI Prompt:</strong> "The head / centerpiece motif outline and silhouette must have a 40% to 50% geometric shape difference from the reference photo and across the 50 variations, while strictly retaining the exact diamond count and lightweight wire construction."
                   </span>
                 </div>
               )}
@@ -636,12 +663,12 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({ onStartAnalysis, isLoa
             {isLoading ? (
               <>
                 <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                <span>Analysing Jewellery Structure...</span>
+                <span>Analysing Jewellery Structure & Generating 50 Concepts...</span>
               </>
             ) : (
               <>
                 <Sparkles className="w-4 h-4" />
-                <span>Generate 10 Design Variations</span>
+                <span>Generate 50 Design Variations</span>
               </>
             )}
           </button>

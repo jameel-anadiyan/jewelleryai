@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { StudioJob, Variation } from './types';
 import { Navbar } from './components/Navbar';
-import { UploadPanel } from './components/UploadPanel';
+import { UploadPanel, AnalysisRequestPayload } from './components/UploadPanel';
 import { ReferenceSummaryCard } from './components/ReferenceSummaryCard';
 import { GridToolbar } from './components/GridToolbar';
 import { VariationCard } from './components/VariationCard';
@@ -17,9 +17,9 @@ import {
   deleteHistoryItem,
 } from './services/storage';
 import { downloadZip } from './services/export';
-import { syncRunToSupabase } from './services/supabase';
+import { syncRunToSupabase, saveDesignToSupabase } from './services/supabase';
 
-const MAX_PARALLEL = 3;
+const MAX_PARALLEL = 4;
 
 export const App: React.FC = () => {
   const [job, setJob] = useState<StudioJob | null>(null);
@@ -108,6 +108,7 @@ export const App: React.FC = () => {
           motif: job?.original?.motif,
           clusterRhodiumFill: job?.clusterRhodiumFill,
           headShapeVariance: job?.headShapeVariance,
+          photoBase64: job?.photoBase64 || job?.photoUrl,
         }),
       });
 
@@ -124,22 +125,34 @@ export const App: React.FC = () => {
         throw new Error(errorMsg);
       }
 
+      const updatedVar: Variation = {
+        ...currentVar!,
+        status: 'done' as const,
+        imageBase64: data.imageBase64,
+        errorMessage: undefined,
+      };
+
+      // Save design directly to Supabase server history
+      saveDesignToSupabase(jobId, updatedVar).catch((e) =>
+        console.warn('Supabase design save note:', e)
+      );
+
       updateJobState((current) => {
         const updatedVariations = current.variations.map((v) =>
-          v.index === index ? { ...v, status: 'done' as const, imageBase64: data.imageBase64 } : v
+          v.index === index ? updatedVar : v
         );
         const updatedJob = { ...current, variations: updatedVariations };
 
-        // Check if all 10 are done to trigger celebratory confetti
+        // Check if all are done to trigger celebratory confetti
         const allDone = updatedVariations.every((v) => v.status === 'done');
         if (allDone) {
           confetti({
-            particleCount: 80,
-            spread: 70,
+            particleCount: 100,
+            spread: 80,
             origin: { y: 0.6 },
             colors: ['#D4AF37', '#FFF1D0', '#AA8542', '#38bdf8'],
           });
-          addToast('success', '✨ All 10 jewellery sketches rendered successfully!');
+          addToast('success', `✨ All ${updatedVariations.length} jewellery sketches rendered successfully!`);
           syncRunToSupabase(updatedJob).catch((e) => console.log('Supabase sync note:', e));
         }
 
@@ -167,7 +180,7 @@ export const App: React.FC = () => {
     }
   };
 
-  // 3. Concurrency Queue (Runs max 3 cards at once as required by PLAN.md)
+  // 3. Concurrency Queue (Runs cards concurrently)
   const runParallelGenerations = async (jobId: string, indexes: number[], quality: 'low' | 'medium' | 'high') => {
     const queue = [...indexes];
     const workers = Array.from({ length: Math.min(MAX_PARALLEL, queue.length) }, async () => {
@@ -182,12 +195,13 @@ export const App: React.FC = () => {
   };
 
   // 4. Analysis trigger from UploadPanel
-  const handleStartAnalysis = async (formData: FormData, previewUrl: string) => {
+  const handleStartAnalysis = async (payload: AnalysisRequestPayload, previewUrl: string) => {
     setIsAnalyzing(true);
     try {
       const response = await fetch('/api/analyze', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
 
       let data: any = null;
@@ -203,7 +217,7 @@ export const App: React.FC = () => {
         throw new Error(errorMsg);
       }
 
-      const quality = (formData.get('quality') as any) || 'medium';
+      const quality = payload.quality || 'medium';
 
       const initialVariations: Variation[] = (data.variations || []).map((v: any) => ({
         ...v,
@@ -214,12 +228,13 @@ export const App: React.FC = () => {
       const newJob: StudioJob = {
         jobId: data.jobId,
         photoUrl: previewUrl,
+        photoBase64: payload.photoBase64,
         sku: data.sku || 'SWA',
         diamondCount: data.diamondCount,
         countFor: data.countFor,
-        stoneSize: (formData.get('stoneSize') as string) || '',
-        metal: (formData.get('metal') as string) || 'same',
-        mustKeep: (formData.get('mustKeep') as string) || '',
+        stoneSize: payload.stoneSize || '',
+        metal: payload.metal || 'same',
+        mustKeep: payload.mustKeep || '',
         quality,
         clusterRhodiumFill: Boolean(data.clusterRhodiumFill),
         headShapeVariance: Boolean(data.headShapeVariance),
@@ -231,13 +246,16 @@ export const App: React.FC = () => {
       setJob(newJob);
       await saveActiveJob(newJob);
 
+      // Save initial run directly to Supabase server
+      syncRunToSupabase(newJob).catch((e) => console.log('Supabase sync note:', e));
+
       // Refresh history list
       const hist = await getHistory();
       setHistory(hist);
 
-      addToast('success', 'Analysis complete! 10 concepts generated. Starting sketches...');
+      addToast('success', `Analysis complete! ${initialVariations.length} concepts generated. Rendering sketches...`);
 
-      // Kick off parallel image generation for all 10 cards (3 at a time)
+      // Kick off parallel image generation for all 50 cards
       const indexesToGenerate = initialVariations.map((v) => v.index);
       runParallelGenerations(newJob.jobId, indexesToGenerate, quality);
     } catch (err: any) {
@@ -401,7 +419,7 @@ export const App: React.FC = () => {
                   onClick={() => setFilterStarredOnly(false)}
                   className="mt-4 px-4 py-2 rounded-lg text-xs font-semibold bg-zinc-800 text-zinc-300 hover:text-white"
                 >
-                  Show All 10 Designs
+                  Show All Designs
                 </button>
               </div>
             )}

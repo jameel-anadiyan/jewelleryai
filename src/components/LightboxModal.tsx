@@ -261,17 +261,17 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
               </div>
             </div>
 
-            {/* Bottom thumbnail strip of all 10 cards */}
+            {/* Bottom thumbnail strip of all variations */}
             <div className="pt-3 border-t border-zinc-800">
               <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold block mb-2">
-                All 10 Variations
+                All Variations ({allVariations.length})
               </span>
-              <div className="grid grid-cols-5 gap-1.5">
+              <div className="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-thin">
                 {allVariations.map((v) => (
                   <button
                     key={v.index}
                     onClick={() => onSelectVariation(v)}
-                    className={`aspect-square rounded-md overflow-hidden border relative ${
+                    className={`w-12 h-12 flex-shrink-0 rounded-md overflow-hidden border relative ${
                       v.index === variation.index
                         ? 'border-gold-400 ring-2 ring-gold-500/30'
                         : 'border-zinc-800 hover:border-zinc-600 opacity-60 hover:opacity-100'

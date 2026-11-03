@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StudioJob } from '../types';
 import {
   X,
@@ -9,10 +9,12 @@ import {
   Trash2,
   FolderOpen,
   Cloud,
-  CheckCircle2,
-  Key,
+  RefreshCw,
 } from 'lucide-react';
-import { setCustomSupabaseKey } from '../services/supabase';
+import {
+  fetchHistoryFromSupabase,
+  deleteRunFromSupabase,
+} from '../services/supabase';
 
 interface HistoryModalProps {
   history: StudioJob[];
@@ -22,29 +24,57 @@ interface HistoryModalProps {
 }
 
 export const HistoryModal: React.FC<HistoryModalProps> = ({
-  history,
+  history: initialHistory,
   onClose,
   onSelectJob,
   onDeleteJob,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [anonKey, setAnonKey] = useState(
-    () => localStorage.getItem('swa_supabase_anon_key') || ''
-  );
-  const [keySaved, setKeySaved] = useState(false);
+  const [combinedHistory, setCombinedHistory] = useState<StudioJob[]>(initialHistory);
+  const [isLoadingCloud, setIsLoadingCloud] = useState(false);
 
-  const filteredHistory = history.filter((job) => {
+  // Load latest history directly from Supabase server on mount
+  useEffect(() => {
+    async function loadCloudHistory() {
+      setIsLoadingCloud(true);
+      try {
+        const cloudJobs = await fetchHistoryFromSupabase();
+        if (cloudJobs && cloudJobs.length > 0) {
+          // Merge local and cloud runs, deduplicating by jobId
+          const map = new Map<string, StudioJob>();
+          initialHistory.forEach((j) => map.set(j.jobId, j));
+          cloudJobs.forEach((j) => {
+            const existing = map.get(j.jobId);
+            if (!existing || (j.variations && j.variations.length >= (existing.variations?.length || 0))) {
+              map.set(j.jobId, j);
+            }
+          });
+          const merged = Array.from(map.values()).sort((a, b) => b.createdAt - a.createdAt);
+          setCombinedHistory(merged);
+        }
+      } catch (err) {
+        console.warn('Could not load cloud history:', err);
+      } finally {
+        setIsLoadingCloud(false);
+      }
+    }
+    loadCloudHistory();
+  }, [initialHistory]);
+
+  const filteredHistory = combinedHistory.filter((job) => {
     const term = searchTerm.toLowerCase();
-    const skuMatch = job.sku.toLowerCase().includes(term);
-    const summaryMatch = job.original.summary.toLowerCase().includes(term);
-    const variationMatch = job.variations.some((v) => v.name.toLowerCase().includes(term));
+    const skuMatch = (job.sku || '').toLowerCase().includes(term);
+    const summaryMatch = (job.original?.summary || '').toLowerCase().includes(term);
+    const variationMatch = (job.variations || []).some((v) => (v.name || '').toLowerCase().includes(term));
     return skuMatch || summaryMatch || variationMatch;
   });
 
-  const handleSaveKey = () => {
-    setCustomSupabaseKey(anonKey.trim());
-    setKeySaved(true);
-    setTimeout(() => setKeySaved(false), 3000);
+  const handleDelete = async (jobId: string) => {
+    // Delete from Supabase server
+    deleteRunFromSupabase(jobId).catch((e) => console.warn('Supabase delete error:', e));
+    // Delete from local
+    onDeleteJob(jobId);
+    setCombinedHistory((prev) => prev.filter((j) => j.jobId !== jobId));
   };
 
   return (
@@ -60,10 +90,14 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
             </div>
             <div>
               <h3 className="text-base font-bold text-white font-luxury">
-                Past Studio Runs & History
+                Past Studio Runs & Design History
               </h3>
-              <p className="text-xs text-zinc-400">
-                Saved in IndexedDB & Supabase Cloud
+              <p className="text-xs text-zinc-400 flex items-center space-x-1.5 mt-0.5">
+                <Cloud className="w-3.5 h-3.5 text-emerald-400 inline" />
+                <span>Connected to Supabase Server (eylkbycxhptmmqcpvloz)</span>
+                {isLoadingCloud && (
+                  <RefreshCw className="w-3 h-3 text-gold-400 animate-spin inline ml-1" />
+                )}
               </p>
             </div>
           </div>
@@ -76,8 +110,8 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
           </button>
         </div>
 
-        {/* Search bar & Supabase config */}
-        <div className="p-4 border-b border-zinc-800/80 space-y-3 bg-zinc-950/60">
+        {/* Search bar */}
+        <div className="p-4 border-b border-zinc-800/80 bg-zinc-950/60">
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3.5 top-3 text-zinc-500 pointer-events-none" />
             <input
@@ -88,31 +122,6 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
               className="w-full pl-10 pr-4 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-white text-xs focus:outline-none focus:border-gold-500"
             />
           </div>
-
-          {/* Supabase Anon Key optional connector */}
-          <div className="flex flex-col sm:flex-row items-center gap-2 pt-1 text-xs">
-            <div className="flex items-center space-x-1.5 text-zinc-400 text-[11px] whitespace-nowrap">
-              <Cloud className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Supabase Cloud (eylkbycxhptmmqcpvloz):</span>
-            </div>
-            <div className="flex items-center space-x-2 w-full">
-              <input
-                type="password"
-                value={anonKey}
-                onChange={(e) => setAnonKey(e.target.value)}
-                placeholder="Optional: Paste Supabase Anon Key for cloud sync"
-                className="flex-1 px-2.5 py-1 rounded-lg bg-zinc-900 border border-zinc-800 text-white text-[11px] focus:outline-none focus:border-gold-500"
-              />
-              <button
-                type="button"
-                onClick={handleSaveKey}
-                className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[11px] font-medium border border-zinc-700 flex items-center space-x-1 whitespace-nowrap"
-              >
-                {keySaved ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> : <Key className="w-3 h-3 text-gold-400" />}
-                <span>{keySaved ? 'Saved' : 'Save'}</span>
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* History list */}
@@ -122,12 +131,13 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
               <Gem className="w-10 h-10 mx-auto mb-2 opacity-30" />
               <p className="text-sm font-medium">No past runs found</p>
               <p className="text-xs text-zinc-600 mt-1">
-                Completed runs are automatically cached in IndexedDB
+                Completed designs and sketches are saved automatically to your Supabase server
               </p>
             </div>
           ) : (
             filteredHistory.map((job) => {
-              const readyCount = job.variations.filter((v) => v.status === 'done').length;
+              const readyCount = (job.variations || []).filter((v) => v.status === 'done' || v.imageBase64).length;
+              const totalCount = job.variations?.length || 50;
               const dateStr = new Date(job.createdAt).toLocaleString(undefined, {
                 month: 'short',
                 day: 'numeric',
@@ -142,11 +152,17 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                 >
                   {/* Left thumbnail and info */}
                   <div className="flex items-center space-x-3.5">
-                    <img
-                      src={job.photoUrl}
-                      alt="Thumbnail"
-                      className="w-14 h-14 object-cover rounded-lg bg-black border border-zinc-800 flex-shrink-0"
-                    />
+                    {job.photoUrl ? (
+                      <img
+                        src={job.photoUrl}
+                        alt="Thumbnail"
+                        className="w-14 h-14 object-cover rounded-lg bg-black border border-zinc-800 flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-14 h-14 rounded-lg bg-zinc-950 border border-zinc-800 flex items-center justify-center text-gold-500/40 flex-shrink-0">
+                        <Gem className="w-6 h-6" />
+                      </div>
+                    )}
                     <div>
                       <div className="flex items-center space-x-2 mb-0.5">
                         <span className="text-xs font-bold text-white">
@@ -156,11 +172,11 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                           {job.diamondCount} Stones
                         </span>
                         <span className="text-[10px] text-zinc-500 capitalize">
-                          {job.quality} quality
+                          {job.quality || 'medium'} quality
                         </span>
                       </div>
                       <p className="text-xs text-zinc-400 line-clamp-1">
-                        {job.original.summary || 'Custom jewellery variation run'}
+                        {job.original?.summary || 'Custom jewellery variation run'}
                       </p>
                       <div className="flex items-center space-x-3 text-[11px] text-zinc-500 mt-1">
                         <span className="flex items-center space-x-1">
@@ -168,7 +184,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                           <span>{dateStr}</span>
                         </span>
                         <span>•</span>
-                        <span>{readyCount} of 10 sketches ready</span>
+                        <span className="text-gold-400/90">{readyCount} of {totalCount} sketches saved</span>
                       </div>
                     </div>
                   </div>
@@ -183,7 +199,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                       <span>Restore Run</span>
                     </button>
                     <button
-                      onClick={() => onDeleteJob(job.jobId)}
+                      onClick={() => handleDelete(job.jobId)}
                       className="p-1.5 rounded-lg bg-zinc-800/80 hover:bg-red-950/60 text-zinc-400 hover:text-red-400 border border-zinc-700/60 hover:border-red-500/40 transition-colors"
                       title="Delete from history"
                     >
