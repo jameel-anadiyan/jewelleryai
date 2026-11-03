@@ -53,12 +53,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const cleanBase64 = photoBase64 ? photoBase64.replace(/^data:image\/[a-z]+;base64,/, '') : '';
 
+    const customKey =
+      (req.headers['x-openai-key'] as string) ||
+      body?.openaiApiKey ||
+      undefined;
+
+    const openai = getOpenAI(customKey);
+
     const imageBuffer = await withRetry(`generateCardImage #${index}`, async () => {
       try {
         if (cleanBase64) {
           const buffer = Buffer.from(cleanBase64, 'base64');
           const file = await toFile(buffer, 'reference_photo.png', { type: 'image/png' });
-          const editResponse = await getOpenAI().images.edit({
+          const editResponse = await openai.images.edit({
             model: imageModel,
             image: file,
             prompt,
@@ -75,7 +82,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
         } else {
           // Text-to-image generator if reference photo not attached
-          const genResponse = await getOpenAI().images.generate({
+          const genResponse = await openai.images.generate({
             model: imageModel,
             prompt,
             size,
@@ -98,7 +105,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (cleanBase64) {
           const buffer = Buffer.from(cleanBase64, 'base64');
           const file = await toFile(buffer, 'reference_photo.png', { type: 'image/png' });
-          const flareResponse = await getOpenAI().images.edit({
+          const flareResponse = await openai.images.edit({
             model: 'gpt-image-2.5-flare',
             image: file,
             prompt,
@@ -107,7 +114,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const flareB64 = flareResponse.data?.[0]?.b64_json;
           if (flareB64) return flareB64;
         } else {
-          const flareResponse = await getOpenAI().images.generate({
+          const flareResponse = await openai.images.generate({
             model: 'gpt-image-2.5-flare',
             prompt,
             size,

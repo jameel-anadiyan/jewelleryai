@@ -78,6 +78,18 @@ export const App: React.FC = () => {
     });
   };
 
+  // Auth headers helper with user's OpenAI key if saved in browser
+  const getAuthHeaders = (): Record<string, string> => {
+    const key = localStorage.getItem('swa_openai_key') || '';
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (key) {
+      headers['x-openai-key'] = key.trim();
+    }
+    return headers;
+  };
+
   // 2. Generate a single card's image
   const generateSingleCard = async (
     jobId: string,
@@ -98,7 +110,7 @@ export const App: React.FC = () => {
     try {
       const response = await fetch('/api/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           jobId,
           index,
@@ -200,7 +212,7 @@ export const App: React.FC = () => {
     try {
       const response = await fetch('/api/analyze', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(payload),
       });
 

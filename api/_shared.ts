@@ -43,12 +43,26 @@ export type AnalysisResponse = z.infer<typeof AnalysisResponseSchema>;
 
 let openaiClient: OpenAI | null = null;
 
-export function getOpenAI(): OpenAI {
+export function getOpenAI(customKey?: string): OpenAI {
+  const apiKey =
+    customKey ||
+    process.env.OPENAI_API_KEY ||
+    process.env.VITE_OPENAI_API_KEY;
+
+  if (!apiKey) {
+    throw new Error(
+      'OPENAI_API_KEY is missing. Please add OPENAI_API_KEY in Vercel Environment Variables, or click "OpenAI Key" in the top bar to set it.'
+    );
+  }
+
+  if (customKey) {
+    return new OpenAI({
+      apiKey: customKey,
+      timeout: 120000,
+    });
+  }
+
   if (!openaiClient) {
-    const apiKey = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error('OPENAI_API_KEY environment variable is missing.');
-    }
     openaiClient = new OpenAI({
       apiKey,
       timeout: 120000,

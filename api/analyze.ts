@@ -54,6 +54,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const perPieceCount = countFor === 'pair' ? Math.max(1, Math.round(diamondCount / 2)) : diamondCount;
     const textModel = process.env.OPENAI_TEXT_MODEL || 'gpt-4o-mini';
 
+    const customKey =
+      (req.headers['x-openai-key'] as string) ||
+      body?.openaiApiKey ||
+      undefined;
+
+    const openai = getOpenAI(customKey);
+
     const clusterRhodiumNote = clusterRhodiumFill
       ? ' MANDATORY SETTING: Diamonds seated closely in a tight cluster or line cluster, white rhodium filling diamond gaps seamlessly as one unified diamond surface.'
       : '';
@@ -88,7 +95,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Execute both batches in parallel for high speed and to stay well under Vercel's timeout
     const fetchBatch1 = async () => {
-      const response = await getOpenAI().chat.completions.create({
+      const response = await openai.chat.completions.create({
         model: textModel,
         messages: [
           { role: 'system', content: getAnalysisSystemPrompt(perPieceCount, 1, clusterRhodiumFill, headShapeVariance) },
@@ -103,7 +110,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     };
 
     const fetchBatch2 = async () => {
-      const response = await getOpenAI().chat.completions.create({
+      const response = await openai.chat.completions.create({
         model: textModel,
         messages: [
           { role: 'system', content: getAnalysisSystemPrompt(perPieceCount, 2, clusterRhodiumFill, headShapeVariance) },
