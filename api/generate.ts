@@ -74,8 +74,7 @@ function buildImagePrompt(
   count: number,
   motif: string,
   clusterRhodiumFill = false,
-  headShapeVariance = false,
-  metal = 'gold'
+  headShapeVariance = false
 ): string {
   const isCluster =
     clusterRhodiumFill === true ||
@@ -91,44 +90,24 @@ function buildImagePrompt(
     (headShapeVariance as any) === 1 ||
     (headShapeVariance as any) === '1';
 
-  const clusterHeader = isCluster
-    ? `CRITICAL STONE SETTING & RHODIUM FILL REQUIREMENT:
-The user requires Close Cluster & White Rhodium Gap Fill. The stones need to be seated nearby like a tight cluster or in a line cluster, feeling as one part with diamonds set in high-polish white rhodium to seamlessly fill the diamond gap.
-ALL ${count} round diamonds MUST be set packed tightly together in a dense cluster or continuous line cluster. High-polish bright white rhodium plating seamlessly fills all gaps between the stones, unifying them into one solid, continuous, sparkling diamond surface. Do NOT scatter or spread diamonds individually across open wire.\n`
+  const clusterRhodiumText = isCluster
+    ? ` Stone arrangement: The stones must be seated closely nearby like a tight cluster or in a line cluster. The diamonds are set in bright-cut white rhodium plating designed to seamlessly fill all diamond gaps, making the diamonds and rhodium feel like one unified diamond cluster part.`
     : '';
 
-  const headShapeHeader = isHeadVariance
-    ? `MANDATORY 40%-50% HEAD SILHOUETTE TRANSFORMATION:
-DO NOT replicate the shape or head contour of the reference photo. Draw a dramatic 40% to 50% transformed centerpiece silhouette: ${variation.name} - ${variation.description}.
-Sculpt this distinct geometric head outline with lightweight, airy wire architecture.\n`
+  const headShapeText = isHeadVariance
+    ? ` Head / Centerpiece Shape: Feature a distinct 40%-50% geometric shape difference in the head silhouette compared to conventional forms (e.g. bold geometric contour, asymmetric petal contour, pointed navette/chevron apex, or sculpted open loop).`
     : '';
 
-  const cleanMotif = (motif || '').trim() || 'fine jewellery motif';
+  const cleanMotif = (motif || '').trim() || 'original jewellery motif';
   const cleanTreatment = (variation.motifTreatment || '').trim() || variation.name;
 
-  const stoneLayoutText = isCluster
-    ? `All ${count} diamonds grouped closely in a tight cluster with high-polish white rhodium seamlessly filling every diamond gap.`
-    : variation.stoneLayout;
-
-  const settingText = isCluster
-    ? `Tight cluster setting with high-polish bright white rhodium plating seamlessly filling all diamond gaps into one continuous radiant diamond surface.`
-    : variation.setting;
-
-  let detailsText = variation.imagePrompt || '';
-  if (isCluster && !detailsText.toLowerCase().includes('rhodium')) {
-    detailsText = `Tight cluster setting with white rhodium gap fill: The ${count} stones are seated nearby in a dense cluster, feeling as one part with high-polish white rhodium seamlessly filling the diamond gaps. ${detailsText}`;
-  }
-
-  const metalText = metal && metal !== 'same' ? `${metal} with white rhodium accents` : '18K gold with white rhodium accents';
-
-  return `${clusterHeader}${headShapeHeader}Jewellery design sketch: Draw ONE new fine jewellery piece in the SWA Diamonds design family.
-Motif Family: ${cleanMotif} (${cleanTreatment}).
+  return `Use the attached product photo as the reference for scale, metal colours and design family. Draw ONE new jewellery design.
+Motif: ${cleanMotif}. Keep it instantly recognisable in this design (${cleanTreatment}). Do not add any other motif.
 Design: ${variation.name} - ${variation.description}
-Head Silhouette & Architecture: ${detailsText}
-Metal: ${metalText}, lightweight construction in thin wire (~1.0-1.2 mm).
-Stones: EXACTLY ${count} round brilliant diamonds. Layout: ${stoneLayoutText}. Draw every diamond facet clearly with fine lines so each stone can be counted. No other stones.
-Setting: ${settingText}
-Style: Professional high-end fine jewellery presentation sketch, fine pencil and ink lines on white paper with soft watercolour shading in gold and white rhodium. Centred, plain white background, single piece, no hands, no props, no text.`;
+Details: ${variation.imagePrompt}${headShapeText}
+Stones: EXACTLY ${count} round brilliant diamonds, laid out as: ${variation.stoneLayout}.${clusterRhodiumText} Draw every diamond clearly with facet lines so each one can be counted. No other stones.
+Setting: ${variation.setting}.${isCluster ? ' Stones seated in tight cluster or line cluster with white rhodium filling diamond gaps.' : ''} Lightweight construction in thin wire.
+Style: professional jewellery design sketch, fine pencil and ink lines on white paper with soft watercolour shading in gold and white gold. Same viewing angle as the reference photo. One design only, centred, plain white background, no text, no hands, no props.`;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -153,7 +132,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       variation,
       diamondCount = 10,
       motif = '',
-      metal = 'gold',
       clusterRhodiumFill = false,
       headShapeVariance = false,
       photoBase64,
@@ -192,7 +170,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const size = (process.env.IMAGE_SIZE as any) || '1024x1024';
 
     const count = Number(diamondCount) || safeVariation.stoneCount || 10;
-    const prompt = buildImagePrompt(safeVariation, count, motif, isClusterRhodium, isHeadVariance, metal);
+    const prompt = buildImagePrompt(safeVariation, count, motif, isClusterRhodium, isHeadVariance);
 
     const cleanBase64 = photoBase64 ? photoBase64.replace(/^data:image\/[a-z]+;base64,/, '') : '';
 
@@ -205,12 +183,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const imageBuffer = await withRetry(`generateCardImage #${index}`, async () => {
       try {
-        // If 40%-50% Head Shape Difference is enabled, generate fresh sketch from scratch
-        // so it does NOT copy the reference photo's silhouette (which would only give 5%-10% change).
-        // If headShapeVariance is false and a reference photo exists, use images.edit.
-        const shouldUseEdit = Boolean(cleanBase64 && !isHeadVariance);
-
-        if (shouldUseEdit) {
+        if (cleanBase64) {
           const buffer = Buffer.from(cleanBase64, 'base64');
           const file = await toFile(buffer, 'reference_photo.png', { type: 'image/png' });
           const editResponse = await openai.images.edit({
@@ -229,7 +202,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return Buffer.from(arrayBuf).toString('base64');
           }
         } else {
-          // Fresh sketch generation embodying the 40%-50% transformed silhouette
           const genResponse = await openai.images.generate({
             model: imageModel,
             prompt,
@@ -248,8 +220,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         throw new Error('Images API response contained neither b64_json nor URL');
       } catch (err: any) {
         console.warn(`[Generate Warning] Model ${imageModel} error: ${err.message}. Retrying fallback...`);
-        const shouldUseEditFallback = Boolean(cleanBase64 && !isHeadVariance);
-        if (shouldUseEditFallback) {
+        if (cleanBase64) {
           const buffer = Buffer.from(cleanBase64, 'base64');
           const file = await toFile(buffer, 'reference_photo.png', { type: 'image/png' });
           const flareResponse = await openai.images.edit({

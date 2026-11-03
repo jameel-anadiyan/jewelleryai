@@ -604,14 +604,14 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({ onStartAnalysis, isLoa
                 </label>
               </div>
               <p className="text-xs text-zinc-300 mt-1 leading-relaxed">
-                Radically transforms the head silhouette and outer contour (hexagons, elongated navette/marquise, asymmetric bypass wave, or pointed chevron crest) by 40%–50% to prevent minor 5%–10% tweaks and produce completely new designs.
+                Feature a distinct 40% to 50% geometric shape difference in the head silhouette compared to conventional forms (e.g. bold geometric contour, asymmetric petal contour, pointed navette/chevron apex, or sculpted open loop).
               </p>
 
               {headShapeVariance && (
                 <div className="mt-2.5 p-2.5 rounded-lg bg-zinc-950/80 border border-blue-500/30 text-[11px] text-blue-200 flex items-start space-x-2">
                   <Sparkles className="w-3.5 h-3.5 text-blue-400 mt-0.5 flex-shrink-0" />
                   <span>
-                    <strong>Active in AI Prompt:</strong> "Mandatory 40%-50% head silhouette transformation enabled. Generate bold new geometric head contours (hexagonal, navette, asymmetric wave, chevron) instead of 5%-10% minor tweaks of the reference image."
+                    <strong>Added to AI Prompt:</strong> "Head / Centerpiece Shape: Feature a distinct 40%-50% geometric shape difference in the head silhouette compared to conventional forms (e.g. bold geometric contour, asymmetric petal contour, pointed navette/chevron apex, or sculpted open loop)."
                   </span>
                 </div>
               )}
