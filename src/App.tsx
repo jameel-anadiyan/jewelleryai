@@ -121,6 +121,7 @@ export const App: React.FC = () => {
           variation: currentVar,
           diamondCount: targetJob.diamondCount,
           motif: targetJob.original?.motif,
+          metal: targetJob.metal || targetJob.original?.metal || 'gold',
           clusterRhodiumFill: Boolean(targetJob.clusterRhodiumFill),
           headShapeVariance: Boolean(targetJob.headShapeVariance),
           photoBase64: targetJob.photoBase64 || targetJob.photoUrl,

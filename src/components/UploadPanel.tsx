@@ -262,7 +262,7 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({ onStartAnalysis, isLoa
           Jewellery Variation Studio
         </h1>
         <p className="text-sm sm:text-base text-zinc-400 max-w-2xl mx-auto leading-relaxed">
-          Upload a master jewellery piece, specify the stone count, and receive 50 new, production-viable concepts with full CAD specifications and high-resolution pencil sketches.
+          Upload a master jewellery piece, specify the stone count, and receive 20 new, production-viable concepts with full CAD specifications and high-resolution pencil sketches.
         </p>
       </div>
 
@@ -515,7 +515,7 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({ onStartAnalysis, isLoa
             className="w-full px-3.5 py-2 rounded-xl bg-zinc-900/80 border border-zinc-700/80 text-white text-xs focus:outline-none focus:border-gold-500"
           />
           <p className="text-[10px] text-zinc-500 mt-1">
-            Features that must remain consistent across all 10 variations
+            Features that must remain consistent across all 20 variations
           </p>
         </div>
 
@@ -604,14 +604,14 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({ onStartAnalysis, isLoa
                 </label>
               </div>
               <p className="text-xs text-zinc-300 mt-1 leading-relaxed">
-                Requires a 40% to 50% geometric shape difference in the head and motif contours across variations (morphing heads into angular geometric, open fluid petals, marquise navettes, pointed chevrons, or crossover crests) while strictly maintaining the entered diamond count.
+                Radically transforms the head silhouette and outer contour (hexagons, elongated navette/marquise, asymmetric bypass wave, or pointed chevron crest) by 40%–50% to prevent minor 5%–10% tweaks and produce completely new designs.
               </p>
 
               {headShapeVariance && (
                 <div className="mt-2.5 p-2.5 rounded-lg bg-zinc-950/80 border border-blue-500/30 text-[11px] text-blue-200 flex items-start space-x-2">
                   <Sparkles className="w-3.5 h-3.5 text-blue-400 mt-0.5 flex-shrink-0" />
                   <span>
-                    <strong>Added to AI Prompt:</strong> "The head / centerpiece motif outline and silhouette must have a 40% to 50% geometric shape difference from the reference photo and across the 50 variations, while strictly retaining the exact diamond count and lightweight wire construction."
+                    <strong>Active in AI Prompt:</strong> "Mandatory 40%-50% head silhouette transformation enabled. Generate bold new geometric head contours (hexagonal, navette, asymmetric wave, chevron) instead of 5%-10% minor tweaks of the reference image."
                   </span>
                 </div>
               )}
@@ -658,12 +658,12 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({ onStartAnalysis, isLoa
             {isLoading ? (
               <>
                 <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                <span>Analysing Jewellery Structure & Generating 50 Concepts...</span>
+                <span>Analysing Jewellery Structure & Generating 20 Concepts...</span>
               </>
             ) : (
               <>
                 <Sparkles className="w-4 h-4" />
-                <span>Generate 50 Design Variations</span>
+                <span>Generate 20 Design Variations</span>
               </>
             )}
           </button>

@@ -137,7 +137,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
           ) : (
             filteredHistory.map((job) => {
               const readyCount = (job.variations || []).filter((v) => v.status === 'done' || v.imageBase64).length;
-              const totalCount = job.variations?.length || 50;
+              const totalCount = job.variations?.length || 20;
               const dateStr = new Date(job.createdAt).toLocaleString(undefined, {
                 month: 'short',
                 day: 'numeric',
