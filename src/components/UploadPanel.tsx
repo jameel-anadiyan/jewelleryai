@@ -1,10 +1,12 @@
 import React, { useState, useRef } from 'react';
+import type { User } from '@supabase/supabase-js';
 import {
   Upload,
   X,
   AlertCircle,
   Sparkles,
   CheckCircle2,
+  Cloud,
 } from 'lucide-react';
 import { CostEstimator } from './CostEstimator';
 
@@ -25,9 +27,16 @@ export interface AnalysisRequestPayload {
 interface UploadPanelProps {
   onStartAnalysis: (payload: AnalysisRequestPayload, previewUrl: string) => Promise<void>;
   isLoading: boolean;
+  currentUser?: User | null;
+  onSignInGoogle?: () => void;
 }
 
-export const UploadPanel: React.FC<UploadPanelProps> = ({ onStartAnalysis, isLoading }) => {
+export const UploadPanel: React.FC<UploadPanelProps> = ({
+  onStartAnalysis,
+  isLoading,
+  currentUser,
+  onSignInGoogle,
+}) => {
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string>('');
   const [diamondCount, setDiamondCount] = useState<number | ''>(10);
@@ -264,6 +273,50 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({ onStartAnalysis, isLoa
         <p className="text-sm sm:text-base text-zinc-400 max-w-2xl mx-auto leading-relaxed">
           Upload a master jewellery piece, specify the stone count, and receive 10 new, production-viable concepts with full CAD specifications and high-resolution pencil sketches.
         </p>
+      </div>
+
+      {/* Supabase & Google Auth Status Banner */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 px-4 py-3 rounded-xl bg-zinc-900/60 border border-zinc-800 text-xs">
+        <div className="flex items-center space-x-2 text-zinc-300">
+          <Cloud className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+          {currentUser ? (
+            <span>
+              Connected to Supabase as{' '}
+              <strong className="text-white font-semibold">{currentUser.email}</strong>. Runs and designs auto-sync to cloud history.
+            </span>
+          ) : (
+            <span className="text-zinc-400">
+              Designs save locally and to Supabase server. Sign in with Google to tie designs to your personal account.
+            </span>
+          )}
+        </div>
+        {!currentUser && onSignInGoogle && (
+          <button
+            type="button"
+            onClick={onSignInGoogle}
+            className="flex items-center space-x-1.5 px-3 py-1 rounded-lg bg-white/10 hover:bg-white/15 text-white font-medium transition-all text-xs"
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+              <path
+                fill="#4285F4"
+                d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.15z"
+              />
+              <path
+                fill="#34A853"
+                d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.41 7.34 24 12 24z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.24C.45 8.15 0 9.99 0 12s.45 3.85 1.24 5.42l4.04-3.15z"
+              />
+              <path
+                fill="#EA4335"
+                d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.59 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+              />
+            </svg>
+            <span>Sign In</span>
+          </button>
+        )}
       </div>
 
       {/* Main form card */}

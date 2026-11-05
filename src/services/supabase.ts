@@ -1,4 +1,4 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient, User, Session } from '@supabase/supabase-js';
 import { StudioJob, Variation } from '../types';
 
 let supabaseClient: SupabaseClient | null = null;
@@ -20,7 +20,13 @@ export function getSupabaseClient(customAnonKey?: string): SupabaseClient | null
   }
 
   if (!supabaseClient) {
-    supabaseClient = createClient(url, key);
+    supabaseClient = createClient(url, key, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    });
   }
   return supabaseClient;
 }
@@ -35,11 +41,78 @@ export function setCustomSupabaseKey(key: string): void {
 }
 
 /**
+ * Initiates Google OAuth sign in using Supabase Auth.
+ * Redirects the user to Google OAuth and returns to current origin.
+ */
+export async function signInWithGoogle(): Promise<{ error: Error | null }> {
+  const client = getSupabaseClient();
+  if (!client) {
+    return { error: new Error('Supabase client is not configured') };
+  }
+
+  const { error } = await client.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin,
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'consent',
+      },
+    },
+  });
+
+  return { error: error ? new Error(error.message) : null };
+}
+
+/**
+ * Signs the current user out of Supabase.
+ */
+export async function signOutUser(): Promise<{ error: Error | null }> {
+  const client = getSupabaseClient();
+  if (!client) {
+    return { error: new Error('Supabase client is not configured') };
+  }
+  const { error } = await client.auth.signOut();
+  return { error: error ? new Error(error.message) : null };
+}
+
+/**
+ * Retrieves the currently authenticated Supabase user.
+ */
+export async function getCurrentUser(): Promise<User | null> {
+  const client = getSupabaseClient();
+  if (!client) return null;
+  try {
+    const { data } = await client.auth.getUser();
+    return data?.user || null;
+  } catch (err) {
+    console.warn('Failed to retrieve current user from Supabase:', err);
+    return null;
+  }
+}
+
+/**
+ * Subscribes to Supabase Auth state changes (login, logout, token refresh).
+ */
+export function onAuthStateChange(
+  callback: (user: User | null, session: Session | null) => void
+) {
+  const client = getSupabaseClient();
+  if (!client) {
+    return { data: { subscription: { unsubscribe: () => {} } } };
+  }
+  return client.auth.onAuthStateChange((_event, session) => {
+    callback(session?.user || null, session);
+  });
+}
+
+/**
  * Saves or updates a single variation design and its generated image in Supabase jewellery_designs table.
  */
 export async function saveDesignToSupabase(
   jobId: string,
-  variation: Variation
+  variation: Variation,
+  user?: User | null
 ): Promise<{ success: boolean; message?: string }> {
   const client = getSupabaseClient();
   if (!client) {
@@ -47,6 +120,7 @@ export async function saveDesignToSupabase(
   }
 
   try {
+    const currentUser = user || (await getCurrentUser());
     const payload = {
       job_id: jobId,
       index: Number(variation.index) || 1,
@@ -60,6 +134,8 @@ export async function saveDesignToSupabase(
       gold_vs_original: variation.goldVsOriginal || '',
       image_prompt: variation.imagePrompt || '',
       image_base64: variation.imageBase64 || null,
+      user_id: currentUser?.id || null,
+      user_email: currentUser?.email || null,
       created_at: new Date().toISOString(),
     };
 
@@ -82,7 +158,8 @@ export async function saveDesignToSupabase(
  * Syncs the entire studio run (metadata + all variations JSON) into Supabase jewellery_runs table.
  */
 export async function syncRunToSupabase(
-  job: StudioJob
+  job: StudioJob,
+  user?: User | null
 ): Promise<{ success: boolean; message?: string }> {
   const client = getSupabaseClient();
   if (!client) {
@@ -90,6 +167,7 @@ export async function syncRunToSupabase(
   }
 
   try {
+    const currentUser = user || (await getCurrentUser());
     const { error } = await client.from('jewellery_runs').upsert(
       {
         job_id: job.jobId,
@@ -100,6 +178,8 @@ export async function syncRunToSupabase(
         photo_base64: job.photoBase64 || job.photoUrl || null,
         created_at: new Date(job.createdAt).toISOString(),
         variations_json: job.variations,
+        user_id: currentUser?.id || null,
+        user_email: currentUser?.email || null,
       },
       { onConflict: 'job_id' }
     );

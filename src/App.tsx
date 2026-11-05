@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
+import type { User } from '@supabase/supabase-js';
 import { StudioJob, Variation } from './types';
 import { Navbar } from './components/Navbar';
 import { UploadPanel, AnalysisRequestPayload } from './components/UploadPanel';
@@ -17,7 +18,14 @@ import {
   deleteHistoryItem,
 } from './services/storage';
 import { downloadZip } from './services/export';
-import { syncRunToSupabase, saveDesignToSupabase } from './services/supabase';
+import {
+  syncRunToSupabase,
+  saveDesignToSupabase,
+  signInWithGoogle,
+  signOutUser,
+  getCurrentUser,
+  onAuthStateChange,
+} from './services/supabase';
 
 const MAX_PARALLEL = 5;
 
@@ -29,6 +37,10 @@ export const App: React.FC = () => {
   const [activeLightboxVariation, setActiveLightboxVariation] = useState<Variation | null>(null);
   const [showHistoryModal, setShowHistoryModal] = useState<boolean>(false);
   const [toasts, setToasts] = useState<ToastData[]>([]);
+
+  // Supabase Google Auth State
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState<boolean>(false);
 
   // Track generating card indexes to manage UI spinners
   const [generatingIndexes, setGeneratingIndexes] = useState<Set<number>>(new Set());
@@ -50,7 +62,39 @@ export const App: React.FC = () => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // 1. Initial Load: Restore from IndexedDB
+  // Google OAuth Handlers
+  const handleGoogleSignIn = async () => {
+    setIsAuthLoading(true);
+    try {
+      const { error } = await signInWithGoogle();
+      if (error) {
+        addToast('error', `Google sign-in error: ${error.message}`);
+      }
+    } catch (err: any) {
+      addToast('error', err?.message || 'Failed to start Google sign-in');
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    setIsAuthLoading(true);
+    try {
+      const { error } = await signOutUser();
+      if (error) {
+        addToast('error', `Sign out error: ${error.message}`);
+      } else {
+        setCurrentUser(null);
+        addToast('info', 'Signed out successfully.');
+      }
+    } catch (err: any) {
+      addToast('error', err?.message || 'Failed to sign out');
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  // 1. Initial Load: Restore from IndexedDB & Supabase Auth Listener
   useEffect(() => {
     async function initStorage() {
       try {
@@ -66,6 +110,25 @@ export const App: React.FC = () => {
       }
     }
     initStorage();
+
+    // Check currently signed in Supabase user
+    getCurrentUser().then((user) => {
+      if (user) {
+        setCurrentUser(user);
+      }
+    });
+
+    // Listen to auth state changes (OAuth redirects, token refresh, logout)
+    const { data: authListener } = onAuthStateChange((user) => {
+      setCurrentUser(user);
+      if (user) {
+        addToast('success', `Signed in as ${user.email}`);
+      }
+    });
+
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
   }, []);
 
   // Update storage whenever job changes
@@ -159,7 +222,7 @@ export const App: React.FC = () => {
       };
 
       // Save design directly to Supabase server history
-      saveDesignToSupabase(targetJob.jobId, updatedVar).catch((e) =>
+      saveDesignToSupabase(targetJob.jobId, updatedVar, currentUser).catch((e) =>
         console.warn('Supabase design save note:', e)
       );
 
@@ -180,7 +243,7 @@ export const App: React.FC = () => {
             colors: ['#D4AF37', '#FFF1D0', '#AA8542', '#38bdf8'],
           });
           addToast('success', `✨ All ${updatedVariations.length} jewellery sketches rendered successfully!`);
-          syncRunToSupabase(updatedJob).catch((e) => console.log('Supabase sync note:', e));
+          syncRunToSupabase(updatedJob, currentUser).catch((e) => console.log('Supabase sync note:', e));
         }
 
         return updatedJob;
@@ -275,7 +338,7 @@ export const App: React.FC = () => {
       await saveActiveJob(newJob);
 
       // Save initial run directly to Supabase server
-      syncRunToSupabase(newJob).catch((e) => console.log('Supabase sync note:', e));
+      syncRunToSupabase(newJob, currentUser).catch((e) => console.log('Supabase sync note:', e));
 
       // Refresh history list
       const hist = await getHistory();
@@ -379,13 +442,22 @@ export const App: React.FC = () => {
         onReset={handleReset}
         onOpenHistory={() => setShowHistoryModal(true)}
         historyCount={history.length}
+        currentUser={currentUser}
+        onSignInGoogle={handleGoogleSignIn}
+        onSignOut={handleSignOut}
+        isAuthLoading={isAuthLoading}
       />
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {!job ? (
           /* Step 1: Upload Panel */
-          <UploadPanel onStartAnalysis={handleStartAnalysis} isLoading={isAnalyzing} />
+          <UploadPanel
+            onStartAnalysis={handleStartAnalysis}
+            isLoading={isAnalyzing}
+            currentUser={currentUser}
+            onSignInGoogle={handleGoogleSignIn}
+          />
         ) : (
           /* Step 2: Results Studio View */
           <div>
