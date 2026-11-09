@@ -130,8 +130,8 @@ function getAnalysisSystemPrompt(
 MOTIF LOCK & COMPLETE DIVERSITY (follow strictly):
 1. Before designing, name the reference's core motif in a few words, for example "heart / love", "infinity", "flower", "butterfly", "evil eye", "star and moon", "leaf", "knot", "crossline X" or "geometric square". Also list its signature details. Return this in original.motif.
 2. Return EXACTLY 10 distinct, production-viable variations numbered 1 to 10.
-3. CRITICAL REQUIREMENT — DO NOT REPEAT THE SAME DESIGN:
-   Every single variation MUST have a distinctly different shape, wireframe structure, and silhouette so no two cards look alike! Spread the 10 designs across these 10 distinct architectural forms:
+3. CRITICAL MANDATORY REQUIREMENT — RADICAL STRUCTURAL DIVERSITY (NO 90% SIMILARITIES):
+   Every single variation MUST have a completely different physical architecture, unique wire curves, and head silhouette so no two cards look alike! No two designs may have more than 50% visual similarity. Spread the 10 designs strictly across these 10 distinct architectural forms:
    - Design 1: Minimalist Solitary Contour (sleek fluid wire silhouette with focal cluster)
    - Design 2: Asymmetric Bypass Wrap (sweeping bypass band crossing around the center)
    - Design 3: Angular Geometric Frame (crisp architectural frame, such as square, rectangular, hexagonal, or cushion frame adhering strictly to the dimension limits)
@@ -246,7 +246,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       type: 'image_url' as const,
       image_url: {
         url: `data:${mimeType};base64,${cleanBase64}`,
-        detail: 'high' as const,
+        detail: 'auto' as const,
       },
     };
 

@@ -27,7 +27,7 @@ import {
   onAuthStateChange,
 } from './services/supabase';
 
-const MAX_PARALLEL = 5;
+const MAX_PARALLEL = 3;
 
 export const App: React.FC = () => {
   const [job, setJob] = useState<StudioJob | null>(null);
@@ -189,7 +189,6 @@ export const App: React.FC = () => {
           headShapeVariance: Boolean(targetJob.headShapeVariance),
           headLength: targetJob.headLength,
           headWidth: targetJob.headWidth,
-          photoBase64: targetJob.photoBase64 || targetJob.photoUrl,
         }),
       });
 
@@ -202,7 +201,14 @@ export const App: React.FC = () => {
       }
 
       if (!response.ok) {
-        const errorMsg = data?.error?.message || responseText || `Server returned status ${response.status}`;
+        let errorMsg = data?.error?.message;
+        if (!errorMsg) {
+          if (responseText.includes('FUNCTION_INVOCATION_FAILED')) {
+            errorMsg = 'Server generation timed out or encountered an error. Click regenerate to retry.';
+          } else {
+            errorMsg = responseText || `Server returned status ${response.status}`;
+          }
+        }
         throw new Error(errorMsg);
       }
 
@@ -307,7 +313,14 @@ export const App: React.FC = () => {
       }
 
       if (!response.ok) {
-        const errorMsg = data?.error?.message || responseText || 'Failed to analyze jewellery reference.';
+        let errorMsg = data?.error?.message;
+        if (!errorMsg) {
+          if (responseText.includes('FUNCTION_INVOCATION_FAILED')) {
+            errorMsg = 'Analysis timed out or encountered an error. Please try uploading again or verify your API key.';
+          } else {
+            errorMsg = responseText || 'Failed to analyze jewellery reference.';
+          }
+        }
         throw new Error(errorMsg);
       }
 

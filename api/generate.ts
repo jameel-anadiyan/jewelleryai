@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import 'dotenv/config';
-import OpenAI, { toFile } from 'openai';
+import OpenAI from 'openai';
 
 export const config = {
   maxDuration: 60,
@@ -73,6 +73,7 @@ function buildImagePrompt(
   variation: Variation,
   count: number,
   motif: string,
+  metal = 'gold',
   clusterRhodiumFill = false,
   headShapeVariance = false,
   headLength?: number,
@@ -93,7 +94,7 @@ function buildImagePrompt(
     (headShapeVariance as any) === '1';
 
   const clusterRhodiumText = isCluster
-    ? ` Stone arrangement: The stones must be seated closely nearby like a tight cluster or in a line cluster. The diamonds are set in bright-cut white rhodium plating designed to seamlessly fill all diamond gaps, making the diamonds and rhodium feel like one unified diamond cluster part.`
+    ? ` Stone arrangement: The stones must be seated closely nearby like a tight cluster or in a line cluster. The diamonds are set in bright-cut white rhodium plating designed to seamlessly fill all diamond gaps, making the diamonds and rhodium feel like one unified diamond cluster surface.`
     : '';
 
   const headShapeText = isHeadVariance
@@ -110,26 +111,32 @@ function buildImagePrompt(
     const maxW = (headWidth * 1.2).toFixed(1);
     const ratio = headLength / headWidth;
 
-    const isNonSquare = Math.abs(ratio - 1) > 0.15;
     const shapeDirection = ratio > 1.25 ? 'elongated / slender' : ratio < 0.8 ? 'wide' : 'proportional';
 
     dimensionsTopDirectives = `CRITICAL MANDATORY REQUIREMENT — HEAD DIMENSION LIMITS (MAX 20% LIMIT):
-The centerpiece head MUST be proportioned to Length: ${headLength} mm by Width: ${headWidth} mm (acceptable range: ${minL}–${maxL} mm length, ${minW}–${maxW} mm width; max 20% variation allowed).
+The centerpiece head MUST be proportioned to Length: ${headLength} mm by Width: ${headWidth} mm (acceptable range: ${minL}–${maxL} mm length, ${minW}–${maxW} mm width; max 20% variation allowed, ${shapeDirection} silhouette).
 Geometric square, rectangular, and faceted motifs are fully welcomed if the design qualifies, but the overall outer head dimensions MUST strictly conform to these ${headLength} x ${headWidth} mm limits (never expanding beyond the 20% limit of ${minL}–${maxL} mm length and ${minW}–${maxW} mm width).\n\n`;
 
     dimensionsDetailText = ` Head Dimensions: Centerpiece scaled to ${headLength} mm length by ${headWidth} mm width (strictly within ${minL}–${maxL} mm length, ${minW}–${maxW} mm width).`;
   }
 
-  const cleanMotif = (motif || '').trim() || 'original jewellery motif';
+  const cleanMotif = (motif || '').trim() || 'fine jewellery motif';
   const cleanTreatment = (variation.motifTreatment || '').trim() || variation.name;
 
-  return `${dimensionsTopDirectives}Use the attached product photo for scale, metal colours and design family only. Draw ONE new jewellery design that is clearly distinct and unique.
-Motif: ${cleanMotif}. Keep it instantly recognisable in this design (${cleanTreatment}). Do not add any other motif.
-Design: ${variation.name} - ${variation.description}${dimensionsDetailText}
-Distinctive Shape & Architecture: ${variation.imagePrompt}${headShapeText}
-Stones: EXACTLY ${count} round brilliant diamonds, uniquely arranged as: ${variation.stoneLayout}.${clusterRhodiumText} Draw every diamond clearly with facet lines so each one can be counted. No other stones.
-Setting: ${variation.setting}.${isCluster ? ' Stones seated in tight cluster or line cluster with white rhodium filling diamond gaps.' : ''} Lightweight construction in thin wire (~1.0-1.2 mm).
-Style: professional jewellery design sketch, fine pencil and ink lines on white paper with soft watercolour shading in gold and white gold. Same viewing angle as the reference photo. One design only, centred, plain white background, no text, no hands, no props.`;
+  const metalDesc = metal.toLowerCase().includes('white')
+    ? '18k white gold'
+    : metal.toLowerCase().includes('rose')
+    ? '18k rose gold'
+    : metal.toLowerCase().includes('two')
+    ? 'two-tone 18k yellow gold and white rhodium'
+    : '18k yellow gold';
+
+  return `${dimensionsTopDirectives}Draw a completely original, unique fine jewellery design sketch in the "${cleanMotif}" motif family.
+Design Concept #${variation.index}: ${variation.name} - ${variation.description}${dimensionsDetailText}
+Architectural Form & Distinctive Silhouette: ${variation.imagePrompt}${headShapeText}
+Stones: EXACTLY ${count} round brilliant diamonds, uniquely arranged as: ${variation.stoneLayout}.${clusterRhodiumText} Draw every diamond clearly with facet lines so each one can be counted. No extra stones.
+Setting: ${variation.setting}.${isCluster ? ' Stones seated in tight cluster or line cluster with white rhodium filling diamond gaps.' : ''} Lightweight construction in thin ${metalDesc} wire (~1.0-1.2 mm).
+Style: professional high-jewellery design sketch, fine pencil and crisp ink linework on clean white textured paper with soft luminous watercolour shading in ${metalDesc} and white rhodium. Centered single piece, pure white background, no hands, no props, no text or watermarks.`;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -154,11 +161,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       variation,
       diamondCount = 10,
       motif = '',
+      metal = 'gold',
       clusterRhodiumFill = false,
       headShapeVariance = false,
       headLength,
       headWidth,
-      photoBase64,
     } = body || {};
 
     const isClusterRhodium =
@@ -208,9 +215,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    const prompt = buildImagePrompt(safeVariation, count, motif, isClusterRhodium, isHeadVariance, numHeadLength, numHeadWidth);
-
-    const cleanBase64 = photoBase64 ? photoBase64.replace(/^data:image\/[a-z]+;base64,/, '') : '';
+    const prompt = buildImagePrompt(
+      safeVariation,
+      count,
+      motif,
+      metal,
+      isClusterRhodium,
+      isHeadVariance,
+      numHeadLength,
+      numHeadWidth
+    );
 
     const customKey =
       (req.headers['x-openai-key'] as string) ||
@@ -221,75 +235,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const imageBuffer = await withRetry(`generateCardImage #${index}`, async () => {
       try {
-        if (cleanBase64) {
-          const buffer = Buffer.from(cleanBase64, 'base64');
-          const file = await toFile(buffer, 'reference_photo.png', { type: 'image/png' });
-          const editResponse = await openai.images.edit({
-            model: imageModel,
-            image: file,
-            prompt,
-            size,
-          });
+        const genResponse = await openai.images.generate({
+          model: imageModel,
+          prompt,
+          size,
+        });
 
-          const b64 = editResponse.data?.[0]?.b64_json;
-          if (b64) return b64;
-          const url = editResponse.data?.[0]?.url;
-          if (url) {
-            const resp = await fetch(url);
-            const arrayBuf = await resp.arrayBuffer();
-            return Buffer.from(arrayBuf).toString('base64');
-          }
-        } else {
-          const genResponse = await openai.images.generate({
-            model: imageModel,
-            prompt,
-            size,
-          });
-
-          const b64 = genResponse.data?.[0]?.b64_json;
-          if (b64) return b64;
-          const url = genResponse.data?.[0]?.url;
-          if (url) {
-            const resp = await fetch(url);
-            const arrayBuf = await resp.arrayBuffer();
-            return Buffer.from(arrayBuf).toString('base64');
-          }
+        const b64 = genResponse.data?.[0]?.b64_json;
+        if (b64) return b64;
+        const url = genResponse.data?.[0]?.url;
+        if (url) {
+          const resp = await fetch(url);
+          const arrayBuf = await resp.arrayBuffer();
+          return Buffer.from(arrayBuf).toString('base64');
         }
         throw new Error('Images API response contained neither b64_json nor URL');
       } catch (err: any) {
         console.warn(`[Generate Warning] Model ${imageModel} error: ${err.message}. Retrying fallback...`);
         const fallbackModel = imageModel === 'gpt-image-2.5-flare' ? 'gpt-image-2.5-sunburst' : 'gpt-image-2.5-flare';
-        if (cleanBase64) {
-          const buffer = Buffer.from(cleanBase64, 'base64');
-          const file = await toFile(buffer, 'reference_photo.png', { type: 'image/png' });
-          const flareResponse = await openai.images.edit({
-            model: fallbackModel,
-            image: file,
-            prompt,
-            size,
-          });
-          const flareB64 = flareResponse.data?.[0]?.b64_json;
-          if (flareB64) return flareB64;
-          const flareUrl = flareResponse.data?.[0]?.url;
-          if (flareUrl) {
-            const resp = await fetch(flareUrl);
-            const arrayBuf = await resp.arrayBuffer();
-            return Buffer.from(arrayBuf).toString('base64');
-          }
-        } else {
-          const flareResponse = await openai.images.generate({
-            model: fallbackModel,
-            prompt,
-            size,
-          });
-          const flareB64 = flareResponse.data?.[0]?.b64_json;
-          if (flareB64) return flareB64;
-          const flareUrl = flareResponse.data?.[0]?.url;
-          if (flareUrl) {
-            const resp = await fetch(flareUrl);
-            const arrayBuf = await resp.arrayBuffer();
-            return Buffer.from(arrayBuf).toString('base64');
-          }
+        const fallbackResponse = await openai.images.generate({
+          model: fallbackModel,
+          prompt,
+          size,
+        });
+        const fallbackB64 = fallbackResponse.data?.[0]?.b64_json;
+        if (fallbackB64) return fallbackB64;
+        const fallbackUrl = fallbackResponse.data?.[0]?.url;
+        if (fallbackUrl) {
+          const resp = await fetch(fallbackUrl);
+          const arrayBuf = await resp.arrayBuffer();
+          return Buffer.from(arrayBuf).toString('base64');
         }
         throw err;
       }
