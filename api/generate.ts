@@ -100,21 +100,34 @@ function buildImagePrompt(
     ? ` Head / Centerpiece Shape: Feature a distinct 40%-50% geometric shape difference in the head silhouette compared to conventional forms (e.g. bold geometric contour, asymmetric petal contour, pointed navette/chevron apex, or sculpted open loop).`
     : '';
 
-  const headDimensionsText = (headLength && headWidth)
-    ? ` Head / Centerpiece Dimensions: Target head dimensions are approximately ${headLength} mm length by ${headWidth} mm width (strict maximum 20% limit: length ${(headLength * 0.8).toFixed(1)}–${(headLength * 1.2).toFixed(1)} mm, width ${(headWidth * 0.8).toFixed(1)}–${(headWidth * 1.2).toFixed(1)} mm; no more than 20% change in head dimensions).`
-    : (headLength
-        ? ` Head Length: Target head length is approximately ${headLength} mm (maximum ±20% limit: ${(headLength * 0.8).toFixed(1)}–${(headLength * 1.2).toFixed(1)} mm; no more than 20% change in length).`
-        : (headWidth
-            ? ` Head Width: Target head width is approximately ${headWidth} mm (maximum ±20% limit: ${(headWidth * 0.8).toFixed(1)}–${(headWidth * 1.2).toFixed(1)} mm; no more than 20% change in width).`
-            : ''));
+  let dimensionsTopDirectives = '';
+  let dimensionsDetailText = '';
+
+  if (headLength && headWidth) {
+    const minL = (headLength * 0.8).toFixed(1);
+    const maxL = (headLength * 1.2).toFixed(1);
+    const minW = (headWidth * 0.8).toFixed(1);
+    const maxW = (headWidth * 1.2).toFixed(1);
+    const ratio = headLength / headWidth;
+
+    const isNonSquare = Math.abs(ratio - 1) > 0.15;
+    const shapeDirection = ratio > 1.25 ? 'elongated / slender' : ratio < 0.8 ? 'wide' : 'proportional';
+
+    dimensionsTopDirectives = `CRITICAL MANDATORY REQUIREMENT — HEAD DIMENSION LIMITS & STRICT BAN ON SQUARE SHAPES:
+The centerpiece head MUST be exactly proportioned to Length: ${headLength} mm by Width: ${headWidth} mm (aspect ratio ${ratio.toFixed(2)}:1, ${shapeDirection} silhouette).
+${isNonSquare ? 'STRICT BAN: DO NOT DRAW A SQUARE, ROUND, OR 1:1 EQUILATERAL HEAD. Drawing a square or circular centerpiece is STRICTLY PROHIBITED because length and width are not equal. Any square head is an unacceptable error.' : ''}
+The centerpiece silhouette MUST strictly adhere to the user\'s dimensions within a maximum 20% limit: length ${minL}–${maxL} mm, width ${minW}–${maxW} mm. Never exceed 20% deviation from ${headLength} mm length and ${headWidth} mm width.\n\n`;
+
+    dimensionsDetailText = ` Head Silhouette & Dimensions: Strictly ${shapeDirection} centerpiece measuring ~${headLength} mm length by ~${headWidth} mm width (strictly within bounds: ${minL}–${maxL} mm length, ${minW}–${maxW} mm width; ${isNonSquare ? 'strictly non-square' : ''}).`;
+  }
 
   const cleanMotif = (motif || '').trim() || 'original jewellery motif';
   const cleanTreatment = (variation.motifTreatment || '').trim() || variation.name;
 
-  return `Use the attached product photo as the reference for scale, metal colours and design family. Draw ONE new jewellery design that is clearly distinct and unique.
+  return `${dimensionsTopDirectives}Use the attached product photo for scale, metal colours and design family only. Draw ONE new jewellery design that is clearly distinct and unique.
 Motif: ${cleanMotif}. Keep it instantly recognisable in this design (${cleanTreatment}). Do not add any other motif.
-Design: ${variation.name} - ${variation.description}
-Distinctive Shape & Architecture: ${variation.imagePrompt}${headShapeText}${headDimensionsText}
+Design: ${variation.name} - ${variation.description}${dimensionsDetailText}
+Distinctive Shape & Architecture: ${variation.imagePrompt}${headShapeText}
 Stones: EXACTLY ${count} round brilliant diamonds, uniquely arranged as: ${variation.stoneLayout}.${clusterRhodiumText} Draw every diamond clearly with facet lines so each one can be counted. No other stones.
 Setting: ${variation.setting}.${isCluster ? ' Stones seated in tight cluster or line cluster with white rhodium filling diamond gaps.' : ''} Lightweight construction in thin wire (~1.0-1.2 mm).
 Style: professional jewellery design sketch, fine pencil and ink lines on white paper with soft watercolour shading in gold and white gold. Same viewing angle as the reference photo. One design only, centred, plain white background, no text, no hands, no props.`;
@@ -184,8 +197,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const size = (process.env.IMAGE_SIZE as any) || '1024x1024';
 
     const count = Number(diamondCount) || safeVariation.stoneCount || 10;
-    const numHeadLength = headLength ? Number(headLength) : undefined;
-    const numHeadWidth = headWidth ? Number(headWidth) : undefined;
+    let numHeadLength = headLength ? Number(headLength) : undefined;
+    let numHeadWidth = headWidth ? Number(headWidth) : undefined;
+
+    // Fallback: parse dimensions from sizeMm if not passed directly
+    if ((!numHeadLength || !numHeadWidth) && safeVariation.sizeMm) {
+      const match = safeVariation.sizeMm.match(/([\d.]+)\s*[x×]\s*([\d.]+)/i);
+      if (match) {
+        numHeadLength = numHeadLength || parseFloat(match[1]);
+        numHeadWidth = numHeadWidth || parseFloat(match[2]);
+      }
+    }
+
     const prompt = buildImagePrompt(safeVariation, count, motif, isClusterRhodium, isHeadVariance, numHeadLength, numHeadWidth);
 
     const cleanBase64 = photoBase64 ? photoBase64.replace(/^data:image\/[a-z]+;base64,/, '') : '';
