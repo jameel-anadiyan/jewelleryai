@@ -113,12 +113,11 @@ function buildImagePrompt(
     const isNonSquare = Math.abs(ratio - 1) > 0.15;
     const shapeDirection = ratio > 1.25 ? 'elongated / slender' : ratio < 0.8 ? 'wide' : 'proportional';
 
-    dimensionsTopDirectives = `CRITICAL MANDATORY REQUIREMENT — HEAD DIMENSION LIMITS & STRICT BAN ON SQUARE SHAPES:
-The centerpiece head MUST be exactly proportioned to Length: ${headLength} mm by Width: ${headWidth} mm (aspect ratio ${ratio.toFixed(2)}:1, ${shapeDirection} silhouette).
-${isNonSquare ? 'STRICT BAN: DO NOT DRAW A SQUARE, ROUND, OR 1:1 EQUILATERAL HEAD. Drawing a square or circular centerpiece is STRICTLY PROHIBITED because length and width are not equal. Any square head is an unacceptable error.' : ''}
-The centerpiece silhouette MUST strictly adhere to the user\'s dimensions within a maximum 20% limit: length ${minL}–${maxL} mm, width ${minW}–${maxW} mm. Never exceed 20% deviation from ${headLength} mm length and ${headWidth} mm width.\n\n`;
+    dimensionsTopDirectives = `CRITICAL MANDATORY REQUIREMENT — HEAD DIMENSION LIMITS (MAX 20% LIMIT):
+The centerpiece head MUST be proportioned to Length: ${headLength} mm by Width: ${headWidth} mm (acceptable range: ${minL}–${maxL} mm length, ${minW}–${maxW} mm width; max 20% variation allowed).
+Geometric square, rectangular, and faceted motifs are fully welcomed if the design qualifies, but the overall outer head dimensions MUST strictly conform to these ${headLength} x ${headWidth} mm limits (never expanding beyond the 20% limit of ${minL}–${maxL} mm length and ${minW}–${maxW} mm width).\n\n`;
 
-    dimensionsDetailText = ` Head Silhouette & Dimensions: Strictly ${shapeDirection} centerpiece measuring ~${headLength} mm length by ~${headWidth} mm width (strictly within bounds: ${minL}–${maxL} mm length, ${minW}–${maxW} mm width; ${isNonSquare ? 'strictly non-square' : ''}).`;
+    dimensionsDetailText = ` Head Dimensions: Centerpiece scaled to ${headLength} mm length by ${headWidth} mm width (strictly within ${minL}–${maxL} mm length, ${minW}–${maxW} mm width).`;
   }
 
   const cleanMotif = (motif || '').trim() || 'original jewellery motif';
