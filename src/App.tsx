@@ -187,6 +187,8 @@ export const App: React.FC = () => {
           metal: targetJob.metal || targetJob.original?.metal || 'gold',
           clusterRhodiumFill: Boolean(targetJob.clusterRhodiumFill),
           headShapeVariance: Boolean(targetJob.headShapeVariance),
+          headLength: targetJob.headLength,
+          headWidth: targetJob.headWidth,
           photoBase64: targetJob.photoBase64 || targetJob.photoUrl,
         }),
       });
@@ -233,6 +235,9 @@ export const App: React.FC = () => {
         const updatedJob = { ...current, variations: updatedVariations };
         jobRef.current = updatedJob;
 
+        // Persist all generated images to Supabase run history immediately
+        syncRunToSupabase(updatedJob, currentUser).catch((e) => console.log('Supabase sync note:', e));
+
         // Check if all are done to trigger celebratory confetti
         const allDone = updatedVariations.every((v) => v.status === 'done');
         if (allDone) {
@@ -243,7 +248,6 @@ export const App: React.FC = () => {
             colors: ['#D4AF37', '#FFF1D0', '#AA8542', '#38bdf8'],
           });
           addToast('success', `✨ All ${updatedVariations.length} jewellery sketches rendered successfully!`);
-          syncRunToSupabase(updatedJob, currentUser).catch((e) => console.log('Supabase sync note:', e));
         }
 
         return updatedJob;
@@ -328,6 +332,8 @@ export const App: React.FC = () => {
         quality,
         clusterRhodiumFill: Boolean(payload.clusterRhodiumFill ?? data.clusterRhodiumFill),
         headShapeVariance: Boolean(payload.headShapeVariance ?? data.headShapeVariance),
+        headLength: payload.headLength !== '' ? payload.headLength : data.headLength,
+        headWidth: payload.headWidth !== '' ? payload.headWidth : data.headWidth,
         original: data.original,
         variations: initialVariations,
         createdAt: Date.now(),

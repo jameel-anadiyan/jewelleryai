@@ -180,6 +180,8 @@ export async function syncRunToSupabase(
         variations_json: job.variations,
         user_id: currentUser?.id || null,
         user_email: currentUser?.email || null,
+        head_length: job.headLength ? Number(job.headLength) : null,
+        head_width: job.headWidth ? Number(job.headWidth) : null,
       },
       { onConflict: 'job_id' }
     );
@@ -214,31 +216,66 @@ export async function fetchHistoryFromSupabase(): Promise<StudioJob[]> {
       return [];
     }
 
-    return data.map((row: any) => ({
-      jobId: row.job_id,
-      photoUrl: row.photo_base64 || '',
-      photoBase64: row.photo_base64 || '',
-      sku: row.sku || 'SWA',
-      diamondCount: row.diamond_count || 10,
-      countFor: (row.count_for as any) || 'piece',
-      stoneSize: '',
-      metal: 'same',
-      mustKeep: '',
-      quality: 'medium',
-      original: {
-        productType: 'Jewellery',
-        metal: 'Gold',
-        motif: 'Fine Jewellery Motif',
-        stoneCount: row.diamond_count || 10,
-        stoneLayout: '',
-        summary: row.original_summary || '',
-      },
-      variations: (row.variations_json || []).map((v: any) => ({
-        ...v,
-        status: v.imageBase64 ? 'done' : 'waiting',
-      })),
-      createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
-    }));
+    const jobIds = data.map((row: any) => row.job_id).filter(Boolean);
+    const designsMap = new Map<string, Map<number, string>>();
+
+    if (jobIds.length > 0) {
+      try {
+        const { data: designs } = await client
+          .from('jewellery_designs')
+          .select('job_id, index, image_base64')
+          .in('job_id', jobIds)
+          .not('image_base64', 'is', null);
+
+        if (designs) {
+          designs.forEach((d: any) => {
+            if (!designsMap.has(d.job_id)) {
+              designsMap.set(d.job_id, new Map());
+            }
+            designsMap.get(d.job_id)!.set(d.index, d.image_base64);
+          });
+        }
+      } catch (e) {
+        console.warn('Could not fetch linked designs:', e);
+      }
+    }
+
+    return data.map((row: any) => {
+      const jobDesigns = designsMap.get(row.job_id);
+      const variations = (row.variations_json || []).map((v: any) => {
+        const generatedImg = jobDesigns?.get(v.index) || v.imageBase64;
+        return {
+          ...v,
+          imageBase64: generatedImg,
+          status: generatedImg ? ('done' as const) : ('waiting' as const),
+        };
+      });
+
+      return {
+        jobId: row.job_id,
+        photoUrl: row.photo_base64 || '',
+        photoBase64: row.photo_base64 || '',
+        sku: row.sku || 'SWA',
+        diamondCount: row.diamond_count || 10,
+        countFor: (row.count_for as any) || 'piece',
+        stoneSize: '',
+        metal: 'same',
+        mustKeep: '',
+        quality: 'medium',
+        headLength: row.head_length,
+        headWidth: row.head_width,
+        original: {
+          productType: 'Jewellery',
+          metal: 'Gold',
+          motif: 'Fine Jewellery Motif',
+          stoneCount: row.diamond_count || 10,
+          stoneLayout: '',
+          summary: row.original_summary || '',
+        },
+        variations,
+        createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+      };
+    });
   } catch (err) {
     console.error('Error fetching Supabase history:', err);
     return [];

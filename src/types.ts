@@ -39,6 +39,8 @@ export interface StudioJob {
   quality: 'low' | 'medium' | 'high';
   clusterRhodiumFill?: boolean;
   headShapeVariance?: boolean;
+  headLength?: number | string;
+  headWidth?: number | string;
   original: OriginalAnalysis;
   variations: Variation[];
   createdAt: number;

@@ -85,7 +85,9 @@ function safeParseJson(raw: string): any {
 function getAnalysisSystemPrompt(
   count: number,
   clusterRhodiumFill = false,
-  headShapeVariance = false
+  headShapeVariance = false,
+  headLength?: number,
+  headWidth?: number
 ): string {
   const isCluster =
     clusterRhodiumFill === true ||
@@ -106,6 +108,14 @@ function getAnalysisSystemPrompt(
   const headShapeVarianceInstruction = isHeadVariance
     ? `\n   - CRITICAL 40%-50% HEAD SHAPE DIVERGENCE: The head / centerpiece motif outline and silhouette MUST have a 40% to 50% geometric shape difference from the reference photo and across the 10 variations. Substantially transform the physical shape and contour of the head/cluster (for example, morphing a rounded or oval head into an angular geometric hexagon, an elongated marquise/navette apex, an asymmetric fluid petal curve, a pointed chevron crest, an open teardrop halo, or an interlocking crossover head) while strictly retaining the exact ${count} diamonds and lightweight wire construction.`
     : '';
+
+  const headDimensionsInstruction = (headLength && headWidth)
+    ? `\n   - STRICT HEAD DIMENSIONS LIMIT (MAX 20% DEVIATION): The reference target head dimensions are Length: ${headLength} mm, Width: ${headWidth} mm. Every generated variation must keep its head length and width strictly within a maximum 20% limit of these measurements (Length: ${(headLength * 0.8).toFixed(1)}–${(headLength * 1.2).toFixed(1)} mm, Width: ${(headWidth * 0.8).toFixed(1)}–${(headWidth * 1.2).toFixed(1)} mm). The change in length and width CANNOT exceed 20% under any circumstance. Ensure each variation's sizeMm reflects this strict 20% limit.`
+    : (headLength
+        ? `\n   - STRICT HEAD LENGTH LIMIT (MAX 20% DEVIATION): Head length is ${headLength} mm. Length must stay strictly within ±20% (${(headLength * 0.8).toFixed(1)}–${(headLength * 1.2).toFixed(1)} mm). Not more than 20% change allowed.`
+        : (headWidth
+            ? `\n   - STRICT HEAD WIDTH LIMIT (MAX 20% DEVIATION): Head width is ${headWidth} mm. Width must stay strictly within ±20% (${(headWidth * 0.8).toFixed(1)}–${(headWidth * 1.2).toFixed(1)} mm). Not more than 20% change allowed.`
+            : ''));
 
   return `You are a senior fine-jewellery designer for SWA Diamonds. You receive one product photo and its exact diamond count per piece: ${count}.
 
@@ -129,7 +139,7 @@ MOTIF LOCK & COMPLETE DIVERSITY (follow strictly):
 Rules for every variation:
 - EXACTLY ${count} diamonds per piece, all the same size as the original. No extra accent stones. No coloured stones unless the original has them.
 - Lightweight: thin wire (about 1.0-1.2 mm), open and airy shapes, no heavy solid metal.
-- Same design family: same mood and proportions, two-tone if the original is two-tone, same band or earring-back type.${clusterRhodiumInstruction}${headShapeVarianceInstruction}
+- Same design family: same mood and proportions, two-tone if the original is two-tone, same band or earring-back type.${clusterRhodiumInstruction}${headShapeVarianceInstruction}${headDimensionsInstruction}
 
 For each variation return:
 - index: integer (1 to 10)
@@ -139,7 +149,7 @@ For each variation return:
 - stoneCount: must equal ${count}
 - stoneLayout: exact placement of every stone in this specific design
 - setting: cluster with rhodium gap fill, prong, bezel, channel, micro-prong, etc.
-- sizeMm: estimated dimensions e.g. 18 x 6
+- sizeMm: estimated dimensions e.g. 18 x 6 (keeping within the ±20% head dimension limit)
 - goldVsOriginal: lighter, about the same, or more
 - imagePrompt: vivid visual description detailing its specific unique construction, wire curves, and stone placement
 
@@ -175,9 +185,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       mustKeep = '',
       clusterRhodiumFill = false,
       headShapeVariance = false,
+      headLength,
+      headWidth,
     } = body || {};
 
     diamondCount = Number(diamondCount) || 10;
+    const numHeadLength = headLength ? Number(headLength) : undefined;
+    const numHeadWidth = headWidth ? Number(headWidth) : undefined;
     if (!photoBase64) {
       return res.status(400).json({
         error: { code: 'missing_image', message: 'Reference jewellery photo is required.' },
@@ -216,6 +230,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ? ' MANDATORY REQUIREMENT: 40%-50% geometric shape difference in the head silhouette across designs.'
       : '';
 
+    const headDimensionsNote = (numHeadLength && numHeadWidth)
+      ? ` MANDATORY HEAD DIMENSION LIMIT (MAX 20% DEVIATION): Specified Head Length: ${numHeadLength} mm, Head Width: ${numHeadWidth} mm. All variations must strictly adhere to these head dimensions within a ±20% limit (Length: ${(numHeadLength * 0.8).toFixed(1)}–${(numHeadLength * 1.2).toFixed(1)} mm, Width: ${(numHeadWidth * 0.8).toFixed(1)}–${(numHeadWidth * 1.2).toFixed(1)} mm). The change in length and width CANNOT exceed 20%.`
+      : '';
+
     const imagePart = {
       type: 'image_url' as const,
       image_url: {
@@ -227,7 +245,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const userPrompt = [
       {
         type: 'text' as const,
-        text: `Analyze this reference jewellery item. Diamond count per piece: ${perPieceCount} (total entered: ${diamondCount}, for: ${countFor}). SKU: ${sku || 'None'}. Stone size: ${stoneSize || 'estimate'}. Metal request: ${metal || 'same as photo'}. Must keep: ${mustKeep || 'none'}.${clusterRhodiumNote}${headShapeVarianceNote} Generate original summary and 10 completely distinct, non-repeating design variations (1 to 10). Return valid JSON.`,
+        text: `Analyze this reference jewellery item. Diamond count per piece: ${perPieceCount} (total entered: ${diamondCount}, for: ${countFor}). SKU: ${sku || 'None'}. Stone size: ${stoneSize || 'estimate'}. Metal request: ${metal || 'same as photo'}. Must keep: ${mustKeep || 'none'}.${clusterRhodiumNote}${headShapeVarianceNote}${headDimensionsNote} Generate original summary and 10 completely distinct, non-repeating design variations (1 to 10). Return valid JSON.`,
       },
       imagePart,
     ];
@@ -237,7 +255,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const response = await openai.chat.completions.create({
         model: textModel,
         messages: [
-          { role: 'system', content: getAnalysisSystemPrompt(perPieceCount, isClusterRhodium, isHeadVariance) },
+          { role: 'system', content: getAnalysisSystemPrompt(perPieceCount, isClusterRhodium, isHeadVariance, numHeadLength, numHeadWidth) },
           { role: 'user', content: userPrompt },
         ],
         response_format: { type: 'json_object' },
@@ -343,6 +361,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       sku,
       clusterRhodiumFill: isClusterRhodium,
       headShapeVariance: isHeadVariance,
+      headLength: numHeadLength,
+      headWidth: numHeadWidth,
     });
   } catch (err: any) {
     console.error('[API analyze Error]', err);

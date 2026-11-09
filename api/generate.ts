@@ -74,7 +74,9 @@ function buildImagePrompt(
   count: number,
   motif: string,
   clusterRhodiumFill = false,
-  headShapeVariance = false
+  headShapeVariance = false,
+  headLength?: number,
+  headWidth?: number
 ): string {
   const isCluster =
     clusterRhodiumFill === true ||
@@ -98,13 +100,21 @@ function buildImagePrompt(
     ? ` Head / Centerpiece Shape: Feature a distinct 40%-50% geometric shape difference in the head silhouette compared to conventional forms (e.g. bold geometric contour, asymmetric petal contour, pointed navette/chevron apex, or sculpted open loop).`
     : '';
 
+  const headDimensionsText = (headLength && headWidth)
+    ? ` Head / Centerpiece Dimensions: Target head dimensions are approximately ${headLength} mm length by ${headWidth} mm width (strict maximum 20% limit: length ${(headLength * 0.8).toFixed(1)}–${(headLength * 1.2).toFixed(1)} mm, width ${(headWidth * 0.8).toFixed(1)}–${(headWidth * 1.2).toFixed(1)} mm; no more than 20% change in head dimensions).`
+    : (headLength
+        ? ` Head Length: Target head length is approximately ${headLength} mm (maximum ±20% limit: ${(headLength * 0.8).toFixed(1)}–${(headLength * 1.2).toFixed(1)} mm; no more than 20% change in length).`
+        : (headWidth
+            ? ` Head Width: Target head width is approximately ${headWidth} mm (maximum ±20% limit: ${(headWidth * 0.8).toFixed(1)}–${(headWidth * 1.2).toFixed(1)} mm; no more than 20% change in width).`
+            : ''));
+
   const cleanMotif = (motif || '').trim() || 'original jewellery motif';
   const cleanTreatment = (variation.motifTreatment || '').trim() || variation.name;
 
   return `Use the attached product photo as the reference for scale, metal colours and design family. Draw ONE new jewellery design that is clearly distinct and unique.
 Motif: ${cleanMotif}. Keep it instantly recognisable in this design (${cleanTreatment}). Do not add any other motif.
 Design: ${variation.name} - ${variation.description}
-Distinctive Shape & Architecture: ${variation.imagePrompt}${headShapeText}
+Distinctive Shape & Architecture: ${variation.imagePrompt}${headShapeText}${headDimensionsText}
 Stones: EXACTLY ${count} round brilliant diamonds, uniquely arranged as: ${variation.stoneLayout}.${clusterRhodiumText} Draw every diamond clearly with facet lines so each one can be counted. No other stones.
 Setting: ${variation.setting}.${isCluster ? ' Stones seated in tight cluster or line cluster with white rhodium filling diamond gaps.' : ''} Lightweight construction in thin wire (~1.0-1.2 mm).
 Style: professional jewellery design sketch, fine pencil and ink lines on white paper with soft watercolour shading in gold and white gold. Same viewing angle as the reference photo. One design only, centred, plain white background, no text, no hands, no props.`;
@@ -134,6 +144,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       motif = '',
       clusterRhodiumFill = false,
       headShapeVariance = false,
+      headLength,
+      headWidth,
       photoBase64,
     } = body || {};
 
@@ -172,7 +184,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const size = (process.env.IMAGE_SIZE as any) || '1024x1024';
 
     const count = Number(diamondCount) || safeVariation.stoneCount || 10;
-    const prompt = buildImagePrompt(safeVariation, count, motif, isClusterRhodium, isHeadVariance);
+    const numHeadLength = headLength ? Number(headLength) : undefined;
+    const numHeadWidth = headWidth ? Number(headWidth) : undefined;
+    const prompt = buildImagePrompt(safeVariation, count, motif, isClusterRhodium, isHeadVariance, numHeadLength, numHeadWidth);
 
     const cleanBase64 = photoBase64 ? photoBase64.replace(/^data:image\/[a-z]+;base64,/, '') : '';
 
