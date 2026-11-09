@@ -101,8 +101,10 @@ function buildImagePrompt(
   const cleanMotif = (motif || '').trim() || 'original jewellery motif';
   const cleanTreatment = (variation.motifTreatment || '').trim() || variation.name;
 
-  return `Use the attached product photo as the reference for scale, metal colours and design family. Draw ONE new jewellery design that is clearly distinct and unique.
+  return `CRITICAL SCALE REQUIREMENT: Maintain the exact same head size and centerpiece proportions as shown in the reference image. The centerpiece head must match the reference photo's head size precisely.
+Use the attached product photo as the reference for head size, scale, metal colours and design family. Draw ONE new jewellery design that is clearly distinct and unique.
 Motif: ${cleanMotif}. Keep it instantly recognisable in this design (${cleanTreatment}). Do not add any other motif.
+Centerpiece Head: Maintain the exact head size and silhouette geometry of the reference image.
 Design: ${variation.name} - ${variation.description}
 Distinctive Shape & Architecture: ${variation.imagePrompt}${headShapeText}
 Stones: EXACTLY ${count} round brilliant diamonds, uniquely arranged as: ${variation.stoneLayout}.${clusterRhodiumText} Draw every diamond clearly with facet lines so each one can be counted. No other stones.

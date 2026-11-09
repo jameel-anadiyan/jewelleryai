@@ -99,3 +99,4 @@ export async function stampMasterMmOnImage(
     img.src = `data:image/png;base64,${cleanInput}`;
   });
 }
+

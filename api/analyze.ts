@@ -112,15 +112,17 @@ function getAnalysisSystemPrompt(
 MOTIF & GEOMETRY LOCK (follow strictly):
 1. Before designing, name the reference's core motif and geometry in a few words, for example "geometric square", "heart / love", "infinity", "flower", "butterfly", "evil eye", "star and moon", "leaf", "knot", or "crossline X". Also list its signature details. Return this in original.motif.
 2. Return EXACTLY 10 distinct, production-viable variations numbered 1 to 10.
-3. CRITICAL MANDATORY REQUIREMENT — USE GEOMETRY OF SAME TYPE:
-   All 10 variations MUST strictly share and preserve the EXACT SAME GEOMETRIC TYPE as the reference piece!
-   - If the reference has a geometric square, rectangular, or cushion head, ALL 10 variations must maintain that geometric square / rectangular centerpiece silhouette.
-   - If the reference is an oval, round cluster, or floral motif, all 10 variations must strictly preserve that geometric type.
-   - Vary the shank architecture, split-wire contours, bypass curves, gallery openwork, shoulder diamond rows, and cluster seating while KEEPING the centerpiece head in the SAME GEOMETRIC TYPE.
+3. CRITICAL MANDATORY REQUIREMENT — USE GEOMETRY OF SAME TYPE & MAINTAIN HEAD SIZE:
+   All 10 variations MUST strictly share and preserve the EXACT SAME GEOMETRIC TYPE and EXACT HEAD SIZE as the reference piece!
+   - Maintain the exact head size of the reference image: the centerpiece head/cluster must match the reference photo's head scale and proportion precisely — do not make it larger or smaller.
+   - If the reference has a geometric square, rectangular, or cushion head, ALL 10 variations must maintain that geometric square / rectangular centerpiece silhouette and head size.
+   - If the reference is an oval, round cluster, or floral motif, all 10 variations must strictly preserve that geometric type and head size.
+   - Vary the shank architecture, split-wire contours, bypass curves, gallery openwork, shoulder diamond rows, and cluster seating while KEEPING the centerpiece head in the SAME GEOMETRIC TYPE and SAME HEAD SIZE.
 4. Original designs only: no brand look-alikes, no logos or text.
 
 Rules for every variation:
 - EXACTLY ${count} diamonds per piece, all the same size as the original. No extra accent stones. No coloured stones unless the original has them.
+- HEAD SIZE: Maintain the exact head size and centerpiece scale of the reference image.
 - Lightweight: thin wire (about 1.0-1.2 mm), open and airy shapes, no heavy solid metal.
 - Same design family: same mood and proportions, two-tone if the original is two-tone, same band or earring-back type.${clusterRhodiumInstruction}${headShapeVarianceInstruction}
 
