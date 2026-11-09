@@ -22,6 +22,7 @@ export interface AnalysisRequestPayload {
   quality: 'low' | 'medium' | 'high';
   clusterRhodiumFill: boolean;
   headShapeVariance: boolean;
+  masterMm?: string;
 }
 
 interface UploadPanelProps {
@@ -48,6 +49,7 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({
   const [quality, setQuality] = useState<'low' | 'medium' | 'high'>('medium');
   const [clusterRhodiumFill, setClusterRhodiumFill] = useState<boolean>(false);
   const [headShapeVariance, setHeadShapeVariance] = useState<boolean>(false);
+  const [masterMm, setMasterMm] = useState<string>('');
 
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [isDragOver, setIsDragOver] = useState(false);
@@ -185,6 +187,7 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({
         quality,
         clusterRhodiumFill,
         headShapeVariance,
+        masterMm: masterMm.trim(),
       },
       photoPreview
     );
@@ -503,8 +506,24 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({
           </div>
         </div>
 
-        {/* Secondary parameters: SKU, Stone size, Metal */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+        {/* Secondary parameters: SKU, Stone size, Metal, Master MM */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+          {/* Master MM */}
+          <div>
+            <label className="block text-xs font-semibold text-zinc-200 mb-1 flex items-center justify-between">
+              <span>Master MM</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded bg-gold-500/15 text-gold-300 font-mono">In Picture</span>
+            </label>
+            <input
+              type="text"
+              value={masterMm}
+              onChange={(e) => setMasterMm(e.target.value)}
+              placeholder="e.g. 4.9 x 2.6 mm"
+              className="w-full px-3.5 py-2 rounded-xl bg-zinc-900/80 border border-zinc-700/80 text-white text-xs focus:outline-none focus:border-gold-500 font-mono"
+            />
+            <p className="text-[10px] text-zinc-500 mt-1">Shows inside the picture as text</p>
+          </div>
+
           {/* SKU */}
           <div>
             <label className="block text-xs font-medium text-zinc-300 mb-1">

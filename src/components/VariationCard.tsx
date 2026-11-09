@@ -215,11 +215,11 @@ export const VariationCard: React.FC<VariationCardProps> = ({
           <button
             onClick={handleRegenerate}
             disabled={variation.status === 'generating'}
-            className="py-1.5 px-2.5 rounded-lg text-xs font-medium bg-zinc-900/60 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-zinc-200 transition-all flex items-center space-x-1"
-            title="Regenerate only this card's image"
+            className="py-1.5 px-3 rounded-lg text-xs font-semibold bg-zinc-900/80 hover:bg-gold-500/10 border border-zinc-700/80 hover:border-gold-500/50 text-zinc-300 hover:text-gold-300 transition-all flex items-center space-x-1.5"
+            title="Re-generate this card's image"
           >
             <RotateCw className={`w-3.5 h-3.5 ${variation.status === 'generating' ? 'animate-spin text-gold-400' : ''}`} />
-            <span className="hidden sm:inline">Regen</span>
+            <span>Re-Generate</span>
           </button>
         </div>
       </div>

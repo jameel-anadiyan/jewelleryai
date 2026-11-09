@@ -109,21 +109,14 @@ function getAnalysisSystemPrompt(
 
   return `You are a senior fine-jewellery designer for SWA Diamonds. You receive one product photo and its exact diamond count per piece: ${count}.
 
-MOTIF LOCK & COMPLETE DIVERSITY (follow strictly):
-1. Before designing, name the reference's core motif in a few words, for example "heart / love", "infinity", "flower", "butterfly", "evil eye", "star and moon", "leaf", "knot", "crossline X" or "geometric square". Also list its signature details. Return this in original.motif.
+MOTIF & GEOMETRY LOCK (follow strictly):
+1. Before designing, name the reference's core motif and geometry in a few words, for example "geometric square", "heart / love", "infinity", "flower", "butterfly", "evil eye", "star and moon", "leaf", "knot", or "crossline X". Also list its signature details. Return this in original.motif.
 2. Return EXACTLY 10 distinct, production-viable variations numbered 1 to 10.
-3. CRITICAL REQUIREMENT — DO NOT REPEAT THE SAME DESIGN:
-   Every single variation MUST have a distinctly different shape, wireframe structure, and silhouette so no two cards look alike! Spread the 10 designs across these 10 distinct architectural forms:
-   - Design 1: Minimalist Solitary Contour (sleek fluid wire silhouette with focal cluster)
-   - Design 2: Asymmetric Bypass Wrap (sweeping bypass band crossing around the center)
-   - Design 3: Angular Geometric Frame (crisp hexagonal or faceted octagonal architectural head)
-   - Design 4: Open Organic Petals (delicate openwork wire petal silhouette)
-   - Design 5: Elongated Navette / Marquise (slender tapered pointed apex contour)
-   - Design 6: Twisted Crossover / Infinity Ribbon (interlocking dual-wire weave)
-   - Design 7: Pointed Chevron Crest (sculpted V-crest cathedral cluster)
-   - Design 8: Open Teardrop Loop (graceful asymmetric pear halo contour)
-   - Design 9: Diagonal Tension Arch (open split-shank with cluster suspended diagonally)
-   - Design 10: Dynamic Spiral Wave (multi-level swirling contour with fluid motion)
+3. CRITICAL MANDATORY REQUIREMENT — USE GEOMETRY OF SAME TYPE:
+   All 10 variations MUST strictly share and preserve the EXACT SAME GEOMETRIC TYPE as the reference piece!
+   - If the reference has a geometric square, rectangular, or cushion head, ALL 10 variations must maintain that geometric square / rectangular centerpiece silhouette.
+   - If the reference is an oval, round cluster, or floral motif, all 10 variations must strictly preserve that geometric type.
+   - Vary the shank architecture, split-wire contours, bypass curves, gallery openwork, shoulder diamond rows, and cluster seating while KEEPING the centerpiece head in the SAME GEOMETRIC TYPE.
 4. Original designs only: no brand look-alikes, no logos or text.
 
 Rules for every variation:
@@ -296,39 +289,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     // If fewer than 10 were returned by the LLM, synthesize remaining to guarantee 10
-    const archetypes = [
-      { name: 'Minimalist Solitary Contour', desc: 'Clean fluid wire silhouette with focal cluster' },
-      { name: 'Asymmetric Bypass Wrap', desc: 'Sweeping bypass band crossing around the center' },
-      { name: 'Angular Geometric Frame', desc: 'Crisp hexagonal architectural head frame' },
-      { name: 'Open Floral Petals', desc: 'Delicate openwork wire petal silhouette' },
-      { name: 'Elongated Navette Apex', desc: 'Slender tapered pointed apex contour' },
-      { name: 'Twisted Crossover Ribbon', desc: 'Interlocking dual-wire weave construction' },
-      { name: 'Pointed Chevron Crest', desc: 'Sculpted V-crest cathedral cluster' },
-      { name: 'Open Teardrop Loop', desc: 'Graceful asymmetric pear halo contour' },
-      { name: 'Diagonal Tension Arch', desc: 'Open split-shank with cluster suspended diagonally' },
-      { name: 'Dynamic Spiral Wave', desc: 'Multi-level swirling contour with fluid motion' },
+    const geometricTreatments = [
+      'Contour Wire Shank',
+      'Dual-Rail Bypass Band',
+      'Cathedral Raised Setting',
+      'Openwork Filigree Gallery',
+      'Knife-Edge Tapered Band',
+      'Split-Shoulder Architecture',
+      'Interlocking Wrap Frame',
+      'Floating Pavé Under-Gallery',
+      'Articulated Stepped Shoulders',
+      'Sleek Tension Crossover',
     ];
 
     while (finalVariations.length < 10) {
       const idx = finalVariations.length + 1;
-      const arc = archetypes[(idx - 1) % archetypes.length];
+      const treatment = geometricTreatments[(idx - 1) % geometricTreatments.length];
       finalVariations.push({
         index: idx,
-        name: `${arc.name} #${idx}`,
-        description: `${arc.desc} interpreting the ${original.motif || 'core'} motif.`,
-        motifTreatment: `${arc.name} variation`,
+        name: `${original.motif || 'Geometric'} ${treatment}`,
+        description: `Refined variation maintaining the exact ${original.motif || 'master'} geometry with ${treatment.toLowerCase()}.`,
+        motifTreatment: `${original.motif || 'Master'} geometry with ${treatment.toLowerCase()}`,
         stoneCount: perPieceCount,
         stoneLayout: isClusterRhodium
           ? `Tight cluster of ${perPieceCount} diamonds with white rhodium gap fill`
-          : `${perPieceCount} round diamonds placed in ${arc.name.toLowerCase()}`,
+          : `${perPieceCount} round diamonds placed in ${original.motif || 'geometric'} setting`,
         setting: isClusterRhodium
           ? 'Tight cluster with white rhodium gap fill'
           : 'Micro-prong',
         sizeMm: '16 x 5',
-        goldVsOriginal: 'lighter',
+        goldVsOriginal: 'about the same',
         imagePrompt: isClusterRhodium
-          ? `Professional fine jewellery design sketch of ${arc.name} with ${perPieceCount} round diamonds in a dense cluster setting filled with bright-cut white rhodium.`
-          : `Professional fine jewellery design sketch of ${arc.name} with ${perPieceCount} round brilliant diamonds.`,
+          ? `Professional fine jewellery design sketch of ${original.motif || 'geometric'} piece with ${treatment.toLowerCase()} and ${perPieceCount} round diamonds in a dense cluster setting filled with bright-cut white rhodium.`
+          : `Professional fine jewellery design sketch of ${original.motif || 'geometric'} piece with ${treatment.toLowerCase()} and ${perPieceCount} round brilliant diamonds.`,
       });
     }
 

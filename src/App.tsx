@@ -26,6 +26,7 @@ import {
   getCurrentUser,
   onAuthStateChange,
 } from './services/supabase';
+import { stampMasterMmOnImage } from './utils/imageStamp';
 
 const MAX_PARALLEL = 5;
 
@@ -204,6 +205,11 @@ export const App: React.FC = () => {
         throw new Error(errorMsg);
       }
 
+      let finalBase64 = data.imageBase64;
+      if (targetJob.masterMm) {
+        finalBase64 = await stampMasterMmOnImage(finalBase64, targetJob.masterMm);
+      }
+
       const updatedVar: Variation = {
         ...(currentVar || {
           index,
@@ -217,7 +223,7 @@ export const App: React.FC = () => {
           imagePrompt: '',
         }),
         status: 'done' as const,
-        imageBase64: data.imageBase64,
+        imageBase64: finalBase64,
         errorMessage: undefined,
       };
 
@@ -328,6 +334,7 @@ export const App: React.FC = () => {
         quality,
         clusterRhodiumFill: Boolean(payload.clusterRhodiumFill ?? data.clusterRhodiumFill),
         headShapeVariance: Boolean(payload.headShapeVariance ?? data.headShapeVariance),
+        masterMm: payload.masterMm || '',
         original: data.original,
         variations: initialVariations,
         createdAt: Date.now(),
@@ -363,6 +370,43 @@ export const App: React.FC = () => {
     if (!activeJob) return;
     addToast('info', `Regenerating sketch for variation #${index}...`);
     generateSingleCard(activeJob, index, activeJob.quality);
+  };
+
+  const handleRegenerateAll = () => {
+    const activeJob = jobRef.current || job;
+    if (!activeJob || isGeneratingImages) return;
+    addToast('info', 'Re-generating all 10 variation sketches...');
+    const allIndexes = activeJob.variations.map((v) => v.index);
+    runParallelGenerations(activeJob, allIndexes, activeJob.quality);
+  };
+
+  const handleUpdateMasterMm = async (newMm: string) => {
+    const activeJob = jobRef.current || job;
+    if (!activeJob) return;
+    const cleanMm = newMm.trim();
+    addToast('info', `Applying Master MM (${cleanMm || 'None'}) to generated pictures...`);
+
+    const updatedVariations = await Promise.all(
+      activeJob.variations.map(async (v) => {
+        if (v.status === 'done' && v.imageBase64) {
+          const reStamped = await stampMasterMmOnImage(v.imageBase64, cleanMm);
+          return { ...v, imageBase64: reStamped };
+        }
+        return v;
+      })
+    );
+
+    const updatedJob: StudioJob = {
+      ...activeJob,
+      masterMm: cleanMm,
+      variations: updatedVariations,
+    };
+
+    jobRef.current = updatedJob;
+    setJob(updatedJob);
+    await saveActiveJob(updatedJob);
+    syncRunToSupabase(updatedJob, currentUser).catch((e) => console.log('Supabase sync note:', e));
+    addToast('success', 'Master MM updated! All picture specifications refreshed.');
   };
 
   const handleToggleStar = (index: number) => {
@@ -464,6 +508,7 @@ export const App: React.FC = () => {
             {/* Reference info summary card */}
             <ReferenceSummaryCard
               job={job}
+              onUpdateMasterMm={handleUpdateMasterMm}
               onViewPhoto={() => {
                 // Open reference image in lightbox preview
                 setActiveLightboxVariation({
@@ -490,6 +535,7 @@ export const App: React.FC = () => {
               isGenerating={isGeneratingImages}
               filterStarredOnly={filterStarredOnly}
               onToggleFilter={() => setFilterStarredOnly(!filterStarredOnly)}
+              onRegenerateAll={handleRegenerateAll}
               onDownloadAllZip={handleDownloadAllZip}
               onDownloadStarredZip={handleDownloadStarredZip}
               onNewUpload={handleReset}

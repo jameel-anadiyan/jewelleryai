@@ -8,6 +8,7 @@ interface GridToolbarProps {
   isGenerating: boolean;
   filterStarredOnly: boolean;
   onToggleFilter: () => void;
+  onRegenerateAll?: () => void;
   onDownloadAllZip: () => void;
   onDownloadStarredZip: () => void;
   onNewUpload: () => void;
@@ -20,6 +21,7 @@ export const GridToolbar: React.FC<GridToolbarProps> = ({
   isGenerating,
   filterStarredOnly,
   onToggleFilter,
+  onRegenerateAll,
   onDownloadAllZip,
   onDownloadStarredZip,
   onNewUpload,
@@ -73,6 +75,19 @@ export const GridToolbar: React.FC<GridToolbarProps> = ({
             <Star className={`w-3.5 h-3.5 ${starredCount > 0 ? 'text-amber-400 fill-amber-400' : ''}`} />
             <span>Starred ({starredCount})</span>
           </button>
+
+          {/* Re-Generate All */}
+          {onRegenerateAll && (
+            <button
+              onClick={onRegenerateAll}
+              disabled={isGenerating}
+              className="flex items-center space-x-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-zinc-900 hover:bg-zinc-800 border border-gold-500/40 text-gold-300 hover:text-gold-200 transition-all shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Re-generate all variation sketches"
+            >
+              <RotateCcw className={`w-3.5 h-3.5 text-gold-400 ${isGenerating ? 'animate-spin' : ''}`} />
+              <span>Re-Generate All</span>
+            </button>
+          )}
 
           {/* Download Starred ZIP */}
           <button

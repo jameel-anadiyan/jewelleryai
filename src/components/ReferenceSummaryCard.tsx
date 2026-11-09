@@ -5,10 +5,13 @@ import { ChevronDown, ChevronUp, Eye } from 'lucide-react';
 interface ReferenceSummaryCardProps {
   job: StudioJob;
   onViewPhoto: (photoUrl: string) => void;
+  onUpdateMasterMm?: (newMm: string) => void;
 }
 
-export const ReferenceSummaryCard: React.FC<ReferenceSummaryCardProps> = ({ job, onViewPhoto }) => {
+export const ReferenceSummaryCard: React.FC<ReferenceSummaryCardProps> = ({ job, onViewPhoto, onUpdateMasterMm }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isEditingMm, setIsEditingMm] = useState(false);
+  const [mmInput, setMmInput] = useState(job.masterMm || '');
 
   return (
     <div className="glass-panel rounded-xl p-4 sm:p-5 mb-6 border border-gold-500/20 bg-zinc-950/70">
@@ -46,6 +49,53 @@ export const ReferenceSummaryCard: React.FC<ReferenceSummaryCardProps> = ({ job,
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40 flex items-center space-x-1">
                   <span>🔒 Motif Lock: {job.original.motif}</span>
                 </span>
+              )}
+
+              {/* Master MM Display & Quick Edit */}
+              {isEditingMm ? (
+                <div className="flex items-center space-x-1">
+                  <input
+                    type="text"
+                    value={mmInput}
+                    onChange={(e) => setMmInput(e.target.value)}
+                    placeholder="e.g. 4.9 x 2.6 mm"
+                    className="px-2 py-0.5 text-[11px] font-mono rounded bg-zinc-900 border border-gold-500 text-white focus:outline-none w-32"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditingMm(false);
+                      if (onUpdateMasterMm) onUpdateMasterMm(mmInput);
+                    }}
+                    className="px-2 py-0.5 text-[10px] font-bold rounded bg-gold-500 text-black hover:opacity-90"
+                  >
+                    Apply MM
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingMm(false)}
+                    className="px-1.5 py-0.5 text-[10px] text-zinc-400 hover:text-white"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMmInput(job.masterMm || '');
+                    setIsEditingMm(true);
+                  }}
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded border font-mono transition-all flex items-center space-x-1 cursor-pointer ${
+                    job.masterMm
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:border-emerald-400'
+                      : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:text-gold-300 hover:border-gold-500/50'
+                  }`}
+                  title="Click to edit Master MM shown within pictures"
+                >
+                  <span>📏 {job.masterMm ? `Master MM: ${job.masterMm}` : '+ Add Master MM to Pictures'}</span>
+                </button>
               )}
               {job.clusterRhodiumFill && (
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
