@@ -57,11 +57,6 @@ export const ReferenceSummaryCard: React.FC<ReferenceSummaryCardProps> = ({ job,
                   ✨ 40%–50% Head Shape Difference
                 </span>
               )}
-              {job.headLength && job.headWidth && (
-                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                  📏 Head: {job.headLength} × {job.headWidth} mm (±20% max)
-                </span>
-              )}
             </div>
 
             <h3 className="text-base font-bold text-white capitalize mt-0.5">

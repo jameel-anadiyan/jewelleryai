@@ -27,7 +27,7 @@ import {
   onAuthStateChange,
 } from './services/supabase';
 
-const MAX_PARALLEL = 3;
+const MAX_PARALLEL = 5;
 
 export const App: React.FC = () => {
   const [job, setJob] = useState<StudioJob | null>(null);
@@ -187,8 +187,7 @@ export const App: React.FC = () => {
           metal: targetJob.metal || targetJob.original?.metal || 'gold',
           clusterRhodiumFill: Boolean(targetJob.clusterRhodiumFill),
           headShapeVariance: Boolean(targetJob.headShapeVariance),
-          headLength: targetJob.headLength,
-          headWidth: targetJob.headWidth,
+          photoBase64: targetJob.photoBase64 || targetJob.photoUrl,
         }),
       });
 
@@ -201,14 +200,7 @@ export const App: React.FC = () => {
       }
 
       if (!response.ok) {
-        let errorMsg = data?.error?.message;
-        if (!errorMsg) {
-          if (responseText.includes('FUNCTION_INVOCATION_FAILED')) {
-            errorMsg = 'Server generation timed out or encountered an error. Click regenerate to retry.';
-          } else {
-            errorMsg = responseText || `Server returned status ${response.status}`;
-          }
-        }
+        const errorMsg = data?.error?.message || responseText || `Server returned status ${response.status}`;
         throw new Error(errorMsg);
       }
 
@@ -241,9 +233,6 @@ export const App: React.FC = () => {
         const updatedJob = { ...current, variations: updatedVariations };
         jobRef.current = updatedJob;
 
-        // Persist all generated images to Supabase run history immediately
-        syncRunToSupabase(updatedJob, currentUser).catch((e) => console.log('Supabase sync note:', e));
-
         // Check if all are done to trigger celebratory confetti
         const allDone = updatedVariations.every((v) => v.status === 'done');
         if (allDone) {
@@ -254,6 +243,7 @@ export const App: React.FC = () => {
             colors: ['#D4AF37', '#FFF1D0', '#AA8542', '#38bdf8'],
           });
           addToast('success', `✨ All ${updatedVariations.length} jewellery sketches rendered successfully!`);
+          syncRunToSupabase(updatedJob, currentUser).catch((e) => console.log('Supabase sync note:', e));
         }
 
         return updatedJob;
@@ -313,14 +303,7 @@ export const App: React.FC = () => {
       }
 
       if (!response.ok) {
-        let errorMsg = data?.error?.message;
-        if (!errorMsg) {
-          if (responseText.includes('FUNCTION_INVOCATION_FAILED')) {
-            errorMsg = 'Analysis timed out or encountered an error. Please try uploading again or verify your API key.';
-          } else {
-            errorMsg = responseText || 'Failed to analyze jewellery reference.';
-          }
-        }
+        const errorMsg = data?.error?.message || responseText || 'Failed to analyze jewellery reference.';
         throw new Error(errorMsg);
       }
 
@@ -345,8 +328,6 @@ export const App: React.FC = () => {
         quality,
         clusterRhodiumFill: Boolean(payload.clusterRhodiumFill ?? data.clusterRhodiumFill),
         headShapeVariance: Boolean(payload.headShapeVariance ?? data.headShapeVariance),
-        headLength: payload.headLength !== '' ? payload.headLength : data.headLength,
-        headWidth: payload.headWidth !== '' ? payload.headWidth : data.headWidth,
         original: data.original,
         variations: initialVariations,
         createdAt: Date.now(),

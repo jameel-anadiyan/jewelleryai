@@ -85,9 +85,7 @@ function safeParseJson(raw: string): any {
 function getAnalysisSystemPrompt(
   count: number,
   clusterRhodiumFill = false,
-  headShapeVariance = false,
-  headLength?: number,
-  headWidth?: number
+  headShapeVariance = false
 ): string {
   const isCluster =
     clusterRhodiumFill === true ||
@@ -109,32 +107,16 @@ function getAnalysisSystemPrompt(
     ? `\n   - CRITICAL 40%-50% HEAD SHAPE DIVERGENCE: The head / centerpiece motif outline and silhouette MUST have a 40% to 50% geometric shape difference from the reference photo and across the 10 variations. Substantially transform the physical shape and contour of the head/cluster (for example, morphing a rounded or oval head into an angular geometric hexagon, an elongated marquise/navette apex, an asymmetric fluid petal curve, a pointed chevron crest, an open teardrop halo, or an interlocking crossover head) while strictly retaining the exact ${count} diamonds and lightweight wire construction.`
     : '';
 
-  let headDimensionsInstruction = '';
-  if (headLength && headWidth) {
-    const minL = (headLength * 0.8).toFixed(1);
-    const maxL = (headLength * 1.2).toFixed(1);
-    const minW = (headWidth * 0.8).toFixed(1);
-    const maxW = (headWidth * 1.2).toFixed(1);
-    const ratio = headLength / headWidth;
-
-    headDimensionsInstruction = `\n   - CRITICAL REQUIREMENT — HEAD DIMENSION LIMITS (MAX 20% LIMIT):
-     * User-specified target dimensions: Length ${headLength} mm, Width ${headWidth} mm (Aspect Ratio: ${ratio.toFixed(2)}:1).
-     * ABSOLUTE 20% LIMIT: Head length for all variations MUST stay strictly between ${minL} mm and ${maxL} mm. Head width MUST stay strictly between ${minW} mm and ${maxW} mm. Under no circumstance may the dimensions vary by more than 20% from ${headLength} mm length and ${headWidth} mm width!
-     * Geometric motifs (including geometric square, cushion, princess, rectangular, or faceted frames) ARE FULLY WELCOME AND QUALIFY if the design fits them, but their overall outer dimensions MUST strictly stay within this ${minL}–${maxL} mm length by ${minW}–${maxW} mm width envelope (maintaining the user's intended scale, never expanding beyond this 20% limit).
-     * Each variation's sizeMm MUST be written as "[length] x [width]" conforming to these limits (e.g. "${headLength} x ${headWidth}").
-     * Each variation's imagePrompt MUST state: "Centerpiece dimensions strictly adhering to ~${headLength} mm length by ~${headWidth} mm width within 20% limit".`;
-  }
-
   return `You are a senior fine-jewellery designer for SWA Diamonds. You receive one product photo and its exact diamond count per piece: ${count}.
 
 MOTIF LOCK & COMPLETE DIVERSITY (follow strictly):
 1. Before designing, name the reference's core motif in a few words, for example "heart / love", "infinity", "flower", "butterfly", "evil eye", "star and moon", "leaf", "knot", "crossline X" or "geometric square". Also list its signature details. Return this in original.motif.
 2. Return EXACTLY 10 distinct, production-viable variations numbered 1 to 10.
-3. CRITICAL MANDATORY REQUIREMENT — RADICAL STRUCTURAL DIVERSITY (NO 90% SIMILARITIES):
-   Every single variation MUST have a completely different physical architecture, unique wire curves, and head silhouette so no two cards look alike! No two designs may have more than 50% visual similarity. Spread the 10 designs strictly across these 10 distinct architectural forms:
+3. CRITICAL REQUIREMENT — DO NOT REPEAT THE SAME DESIGN:
+   Every single variation MUST have a distinctly different shape, wireframe structure, and silhouette so no two cards look alike! Spread the 10 designs across these 10 distinct architectural forms:
    - Design 1: Minimalist Solitary Contour (sleek fluid wire silhouette with focal cluster)
    - Design 2: Asymmetric Bypass Wrap (sweeping bypass band crossing around the center)
-   - Design 3: Angular Geometric Frame (crisp architectural frame, such as square, rectangular, hexagonal, or cushion frame adhering strictly to the dimension limits)
+   - Design 3: Angular Geometric Frame (crisp hexagonal or faceted octagonal architectural head)
    - Design 4: Open Organic Petals (delicate openwork wire petal silhouette)
    - Design 5: Elongated Navette / Marquise (slender tapered pointed apex contour)
    - Design 6: Twisted Crossover / Infinity Ribbon (interlocking dual-wire weave)
@@ -147,7 +129,7 @@ MOTIF LOCK & COMPLETE DIVERSITY (follow strictly):
 Rules for every variation:
 - EXACTLY ${count} diamonds per piece, all the same size as the original. No extra accent stones. No coloured stones unless the original has them.
 - Lightweight: thin wire (about 1.0-1.2 mm), open and airy shapes, no heavy solid metal.
-- Same design family: same mood and proportions, two-tone if the original is two-tone, same band or earring-back type.${clusterRhodiumInstruction}${headShapeVarianceInstruction}${headDimensionsInstruction}
+- Same design family: same mood and proportions, two-tone if the original is two-tone, same band or earring-back type.${clusterRhodiumInstruction}${headShapeVarianceInstruction}
 
 For each variation return:
 - index: integer (1 to 10)
@@ -157,7 +139,7 @@ For each variation return:
 - stoneCount: must equal ${count}
 - stoneLayout: exact placement of every stone in this specific design
 - setting: cluster with rhodium gap fill, prong, bezel, channel, micro-prong, etc.
-- sizeMm: estimated dimensions e.g. 18 x 6 (keeping within the ±20% head dimension limit)
+- sizeMm: estimated dimensions e.g. 18 x 6
 - goldVsOriginal: lighter, about the same, or more
 - imagePrompt: vivid visual description detailing its specific unique construction, wire curves, and stone placement
 
@@ -193,13 +175,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       mustKeep = '',
       clusterRhodiumFill = false,
       headShapeVariance = false,
-      headLength,
-      headWidth,
     } = body || {};
 
     diamondCount = Number(diamondCount) || 10;
-    const numHeadLength = headLength ? Number(headLength) : undefined;
-    const numHeadWidth = headWidth ? Number(headWidth) : undefined;
     if (!photoBase64) {
       return res.status(400).json({
         error: { code: 'missing_image', message: 'Reference jewellery photo is required.' },
@@ -238,22 +216,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ? ' MANDATORY REQUIREMENT: 40%-50% geometric shape difference in the head silhouette across designs.'
       : '';
 
-    const headDimensionsNote = (numHeadLength && numHeadWidth)
-      ? ` MANDATORY HEAD DIMENSION LIMITS (MAX 20% LIMIT): Specified Head Length: ${numHeadLength} mm, Head Width: ${numHeadWidth} mm (aspect ratio ${(numHeadLength / numHeadWidth).toFixed(2)}:1). All variations must strictly adhere to these head dimensions within a ±20% limit (Length: ${(numHeadLength * 0.8).toFixed(1)}–${(numHeadLength * 1.2).toFixed(1)} mm, Width: ${(numHeadWidth * 0.8).toFixed(1)}–${(numHeadWidth * 1.2).toFixed(1)} mm). Geometric square, rectangular, or faceted motifs are fully welcome if the design qualifies, but outer dimensions must strictly conform to this 20% limit.`
-      : '';
-
     const imagePart = {
       type: 'image_url' as const,
       image_url: {
         url: `data:${mimeType};base64,${cleanBase64}`,
-        detail: 'auto' as const,
+        detail: 'high' as const,
       },
     };
 
     const userPrompt = [
       {
         type: 'text' as const,
-        text: `Analyze this reference jewellery item. Diamond count per piece: ${perPieceCount} (total entered: ${diamondCount}, for: ${countFor}). SKU: ${sku || 'None'}. Stone size: ${stoneSize || 'estimate'}. Metal request: ${metal || 'same as photo'}. Must keep: ${mustKeep || 'none'}.${clusterRhodiumNote}${headShapeVarianceNote}${headDimensionsNote} Generate original summary and 10 completely distinct, non-repeating design variations (1 to 10). Return valid JSON.`,
+        text: `Analyze this reference jewellery item. Diamond count per piece: ${perPieceCount} (total entered: ${diamondCount}, for: ${countFor}). SKU: ${sku || 'None'}. Stone size: ${stoneSize || 'estimate'}. Metal request: ${metal || 'same as photo'}. Must keep: ${mustKeep || 'none'}.${clusterRhodiumNote}${headShapeVarianceNote} Generate original summary and 10 completely distinct, non-repeating design variations (1 to 10). Return valid JSON.`,
       },
       imagePart,
     ];
@@ -263,7 +237,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const response = await openai.chat.completions.create({
         model: textModel,
         messages: [
-          { role: 'system', content: getAnalysisSystemPrompt(perPieceCount, isClusterRhodium, isHeadVariance, numHeadLength, numHeadWidth) },
+          { role: 'system', content: getAnalysisSystemPrompt(perPieceCount, isClusterRhodium, isHeadVariance) },
           { role: 'user', content: userPrompt },
         ],
         response_format: { type: 'json_object' },
@@ -315,7 +289,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         stoneCount: perPieceCount,
         stoneLayout,
         setting,
-        sizeMm: v.sizeMm || (numHeadLength && numHeadWidth ? `${numHeadLength} x ${numHeadWidth}` : '16 x 6'),
+        sizeMm: v.sizeMm || '16 x 6',
         goldVsOriginal: v.goldVsOriginal || 'about the same',
         imagePrompt,
       };
@@ -325,7 +299,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const archetypes = [
       { name: 'Minimalist Solitary Contour', desc: 'Clean fluid wire silhouette with focal cluster' },
       { name: 'Asymmetric Bypass Wrap', desc: 'Sweeping bypass band crossing around the center' },
-      { name: 'Angular Elongated Frame', desc: 'Crisp slender faceted architectural head frame' },
+      { name: 'Angular Geometric Frame', desc: 'Crisp hexagonal architectural head frame' },
       { name: 'Open Floral Petals', desc: 'Delicate openwork wire petal silhouette' },
       { name: 'Elongated Navette Apex', desc: 'Slender tapered pointed apex contour' },
       { name: 'Twisted Crossover Ribbon', desc: 'Interlocking dual-wire weave construction' },
@@ -350,7 +324,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         setting: isClusterRhodium
           ? 'Tight cluster with white rhodium gap fill'
           : 'Micro-prong',
-        sizeMm: numHeadLength && numHeadWidth ? `${numHeadLength} x ${numHeadWidth}` : '16 x 5',
+        sizeMm: '16 x 5',
         goldVsOriginal: 'lighter',
         imagePrompt: isClusterRhodium
           ? `Professional fine jewellery design sketch of ${arc.name} with ${perPieceCount} round diamonds in a dense cluster setting filled with bright-cut white rhodium.`
@@ -369,8 +343,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       sku,
       clusterRhodiumFill: isClusterRhodium,
       headShapeVariance: isHeadVariance,
-      headLength: numHeadLength,
-      headWidth: numHeadWidth,
     });
   } catch (err: any) {
     console.error('[API analyze Error]', err);

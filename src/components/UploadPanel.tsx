@@ -22,8 +22,6 @@ export interface AnalysisRequestPayload {
   quality: 'low' | 'medium' | 'high';
   clusterRhodiumFill: boolean;
   headShapeVariance: boolean;
-  headLength?: number | '';
-  headWidth?: number | '';
 }
 
 interface UploadPanelProps {
@@ -44,14 +42,12 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({
   const [diamondCount, setDiamondCount] = useState<number | ''>(10);
   const [countFor, setCountFor] = useState<'piece' | 'pair'>('piece');
   const [sku, setSku] = useState<string>('SWA-28035');
-  const [stoneSize, setStoneSize] = useState<string>('');
+  const [stoneSize, setStoneSize] = useState<string>('1.1 mm');
   const [metal, setMetal] = useState<string>('same');
   const [mustKeep, setMustKeep] = useState<string>('Bypass wire band, lightweight airy structure');
   const [quality, setQuality] = useState<'low' | 'medium' | 'high'>('medium');
-  const [clusterRhodiumFill, setClusterRhodiumFill] = useState<boolean>(true);
+  const [clusterRhodiumFill, setClusterRhodiumFill] = useState<boolean>(false);
   const [headShapeVariance, setHeadShapeVariance] = useState<boolean>(false);
-  const [headLength, setHeadLength] = useState<number | ''>('');
-  const [headWidth, setHeadWidth] = useState<number | ''>('');
 
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [isDragOver, setIsDragOver] = useState(false);
@@ -189,8 +185,6 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({
         quality,
         clusterRhodiumFill,
         headShapeVariance,
-        headLength: headLength !== '' ? Number(headLength) : '',
-        headWidth: headWidth !== '' ? Number(headWidth) : '',
       },
       photoPreview
     );
@@ -255,12 +249,9 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({
           setDiamondCount(10);
           setCountFor('piece');
           setSku('SWA-28035');
-          setStoneSize('');
+          setStoneSize('1.1 mm');
           setMetal('two-tone');
           setMustKeep('Bypass curve loop, 10 pavé round brilliant diamonds');
-          setClusterRhodiumFill(true);
-          setHeadLength(14);
-          setHeadWidth(7);
         }
       }, 'image/png');
     } catch (err) {
@@ -562,98 +553,6 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({
             </select>
             <p className="text-[10px] text-zinc-500 mt-1">Color palette for sketch</p>
           </div>
-        </div>
-
-        {/* Head Dimensions (Length & Width with 20% variation limit) */}
-        <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-3">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold text-zinc-200 flex items-center space-x-2">
-              <span>Head / Centerpiece Dimensions (Length & Width)</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-gold-500/10 border border-gold-500/30 text-gold-300 font-mono font-medium">
-                Max 20% Limit
-              </span>
-            </label>
-            <span className="text-[11px] text-zinc-500">Optional</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Head Length */}
-            <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-1">
-                Head Length (mm)
-              </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0.5"
-                  max="100"
-                  value={headLength}
-                  onChange={(e) => {
-                    const val = e.target.value === '' ? '' : parseFloat(e.target.value);
-                    setHeadLength(val);
-                  }}
-                  placeholder="e.g. 14"
-                  className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-zinc-700/80 text-white text-xs focus:outline-none focus:border-gold-500"
-                />
-                <span className="absolute right-3 top-2 text-xs text-zinc-500 pointer-events-none">
-                  mm
-                </span>
-              </div>
-              <p className="text-[10px] text-zinc-500 mt-1">
-                {headLength !== '' ? (
-                  <span className="text-gold-300 font-mono">
-                    Limit: {(Number(headLength) * 0.8).toFixed(1)}–{(Number(headLength) * 1.2).toFixed(1)} mm (±20%)
-                  </span>
-                ) : (
-                  '±20% maximum change allowed across designs'
-                )}
-              </p>
-            </div>
-
-            {/* Head Width */}
-            <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-1">
-                Head Width (mm)
-              </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0.5"
-                  max="100"
-                  value={headWidth}
-                  onChange={(e) => {
-                    const val = e.target.value === '' ? '' : parseFloat(e.target.value);
-                    setHeadWidth(val);
-                  }}
-                  placeholder="e.g. 7"
-                  className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-zinc-700/80 text-white text-xs focus:outline-none focus:border-gold-500"
-                />
-                <span className="absolute right-3 top-2 text-xs text-zinc-500 pointer-events-none">
-                  mm
-                </span>
-              </div>
-              <p className="text-[10px] text-zinc-500 mt-1">
-                {headWidth !== '' ? (
-                  <span className="text-gold-300 font-mono">
-                    Limit: {(Number(headWidth) * 0.8).toFixed(1)}–{(Number(headWidth) * 1.2).toFixed(1)} mm (±20%)
-                  </span>
-                ) : (
-                  '±20% maximum change allowed across designs'
-                )}
-              </p>
-            </div>
-          </div>
-
-          {(headLength !== '' || headWidth !== '') && (
-            <div className="p-2 rounded-lg bg-zinc-950/80 border border-gold-500/25 text-[11px] text-gold-200 flex items-center space-x-2">
-              <Sparkles className="w-3.5 h-3.5 text-gold-400 flex-shrink-0" />
-              <span>
-                <strong>Added to Prompt:</strong> Head dimensions constrained to target scale with a strict 20% limit maximum variation.
-              </span>
-            </div>
-          )}
         </div>
 
         {/* Must keep notes */}
