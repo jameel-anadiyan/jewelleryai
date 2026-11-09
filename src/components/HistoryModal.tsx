@@ -322,9 +322,9 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                               <span className="text-[11px] font-semibold text-white line-clamp-1">
                                 {v.name || `Design ${v.index}`}
                               </span>
-                              {v.sizeMm && (
+                              {(v.actualHeadMm || v.sizeMm) && (
                                 <span className="text-[10px] text-gold-300 font-mono">
-                                  {v.sizeMm}
+                                  {v.actualHeadMm || v.sizeMm}
                                 </span>
                               )}
                               <span className="text-[10px] text-zinc-400 flex items-center space-x-1 mt-0.5">
@@ -375,7 +375,10 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
                 </h4>
                 <p className="text-xs text-zinc-400 mt-0.5 font-mono">
                   SKU: {selectedVariation.job.sku} • {selectedVariation.job.diamondCount} Stones
-                  {selectedVariation.variation.sizeMm
+                  {selectedVariation.job.masterMm ? ` • Master: ${selectedVariation.job.masterMm}` : ''}
+                  {selectedVariation.variation.actualHeadMm
+                    ? ` • Actual: ${selectedVariation.variation.actualHeadMm}`
+                    : selectedVariation.variation.sizeMm
                     ? ` • Head: ${selectedVariation.variation.sizeMm}`
                     : ''}
                 </p>

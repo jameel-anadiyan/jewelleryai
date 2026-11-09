@@ -261,6 +261,8 @@ export async function fetchHistoryFromSupabase(): Promise<StudioJob[]> {
         mustKeep: '',
         quality: 'medium',
         masterMm: row.master_mm || '',
+        masterHeight: row.head_height || row.head_length,
+        masterWidth: row.head_width,
         original: {
           productType: 'Jewellery',
           metal: 'Gold',

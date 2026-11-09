@@ -27,6 +27,7 @@ import {
   onAuthStateChange,
 } from './services/supabase';
 import { stampMasterMmOnImage } from './utils/imageStamp';
+import { calculateActualHeadDimension } from './utils/dimensionCalculator';
 
 const MAX_PARALLEL = 5;
 
@@ -205,11 +206,16 @@ export const App: React.FC = () => {
         throw new Error(errorMsg);
       }
 
+      const dims = calculateActualHeadDimension(targetJob, currentVar);
+
       let finalBase64 = data.imageBase64;
       finalBase64 = await stampMasterMmOnImage(finalBase64, {
-        height: targetJob.headHeight,
-        width: targetJob.headWidth,
         masterMm: targetJob.masterMm,
+        masterHeight: targetJob.masterHeight || targetJob.headHeight,
+        masterWidth: targetJob.masterWidth || targetJob.headWidth,
+        actualHeight: dims.actualHeight,
+        actualWidth: dims.actualWidth,
+        actualText: dims.actualText,
         sizeMm: currentVar?.sizeMm,
       });
 
@@ -227,6 +233,9 @@ export const App: React.FC = () => {
         }),
         status: 'done' as const,
         imageBase64: finalBase64,
+        actualHeadMm: dims.actualText,
+        actualHeight: dims.actualHeight,
+        actualWidth: dims.actualWidth,
         errorMessage: undefined,
       };
 
@@ -338,12 +347,25 @@ export const App: React.FC = () => {
         clusterRhodiumFill: Boolean(payload.clusterRhodiumFill ?? data.clusterRhodiumFill),
         headShapeVariance: Boolean(payload.headShapeVariance ?? data.headShapeVariance),
         masterMm: payload.masterMm || '',
-        headHeight: payload.headHeight,
-        headWidth: payload.headWidth,
+        masterHeight: payload.masterHeight ?? payload.headHeight,
+        masterWidth: payload.masterWidth ?? payload.headWidth,
+        headHeight: payload.headHeight ?? payload.masterHeight,
+        headWidth: payload.headWidth ?? payload.masterWidth,
         original: data.original,
         variations: initialVariations,
         createdAt: Date.now(),
       };
+
+      // Calculate actual head dimensions for all variations according to generated design
+      newJob.variations = initialVariations.map((v) => {
+        const dims = calculateActualHeadDimension(newJob, v);
+        return {
+          ...v,
+          actualHeadMm: dims.actualText,
+          actualHeight: dims.actualHeight,
+          actualWidth: dims.actualWidth,
+        };
+      });
 
       jobRef.current = newJob;
       setJob(newJob);
@@ -393,16 +415,26 @@ export const App: React.FC = () => {
 
     const updatedVariations = await Promise.all(
       activeJob.variations.map(async (v) => {
-        if (v.status === 'done' && v.imageBase64) {
-          const reStamped = await stampMasterMmOnImage(v.imageBase64, {
-            height: activeJob.headHeight,
-            width: activeJob.headWidth,
+        const dims = calculateActualHeadDimension({ ...activeJob, masterMm: cleanMm }, v);
+        let imageBase64 = v.imageBase64;
+        if (v.status === 'done' && imageBase64) {
+          imageBase64 = await stampMasterMmOnImage(imageBase64, {
             masterMm: cleanMm,
+            masterHeight: activeJob.masterHeight || activeJob.headHeight,
+            masterWidth: activeJob.masterWidth || activeJob.headWidth,
+            actualHeight: dims.actualHeight,
+            actualWidth: dims.actualWidth,
+            actualText: dims.actualText,
             sizeMm: v.sizeMm,
           });
-          return { ...v, imageBase64: reStamped };
         }
-        return v;
+        return {
+          ...v,
+          imageBase64,
+          actualHeadMm: dims.actualText,
+          actualHeight: dims.actualHeight,
+          actualWidth: dims.actualWidth,
+        };
       })
     );
 

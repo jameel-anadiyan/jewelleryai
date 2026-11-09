@@ -9,6 +9,9 @@ export interface Variation {
   stoneLayout: string;
   setting: string;
   sizeMm: string;
+  actualHeadMm?: string;
+  actualHeight?: number;
+  actualWidth?: number;
   goldVsOriginal: string;
   imagePrompt: string;
   status: CardStatus;
@@ -40,6 +43,8 @@ export interface StudioJob {
   clusterRhodiumFill?: boolean;
   headShapeVariance?: boolean;
   masterMm?: string;
+  masterHeight?: number | string;
+  masterWidth?: number | string;
   headHeight?: number | string;
   headWidth?: number | string;
   original: OriginalAnalysis;

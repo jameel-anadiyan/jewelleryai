@@ -23,6 +23,8 @@ export interface AnalysisRequestPayload {
   clusterRhodiumFill: boolean;
   headShapeVariance: boolean;
   masterMm?: string;
+  masterHeight?: number | string;
+  masterWidth?: number | string;
   headHeight?: number | string;
   headWidth?: number | string;
 }
@@ -51,8 +53,8 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({
   const [quality, setQuality] = useState<'low' | 'medium' | 'high'>('medium');
   const [clusterRhodiumFill, setClusterRhodiumFill] = useState<boolean>(false);
   const [headShapeVariance, setHeadShapeVariance] = useState<boolean>(false);
-  const [headHeight, setHeadHeight] = useState<number | ''>('');
-  const [headWidth, setHeadWidth] = useState<number | ''>('');
+  const [masterHeight, setMasterHeight] = useState<number | ''>('');
+  const [masterWidth, setMasterWidth] = useState<number | ''>('');
 
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [isDragOver, setIsDragOver] = useState(false);
@@ -190,9 +192,11 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({
         quality,
         clusterRhodiumFill,
         headShapeVariance,
-        masterMm: headHeight && headWidth ? `${headHeight} x ${headWidth} mm` : '',
-        headHeight: headHeight !== '' ? headHeight : undefined,
-        headWidth: headWidth !== '' ? headWidth : undefined,
+        masterMm: masterHeight && masterWidth ? `${masterHeight} x ${masterWidth} mm` : '',
+        masterHeight: masterHeight !== '' ? masterHeight : undefined,
+        masterWidth: masterWidth !== '' ? masterWidth : undefined,
+        headHeight: masterHeight !== '' ? masterHeight : undefined,
+        headWidth: masterWidth !== '' ? masterWidth : undefined,
       },
       photoPreview
     );
@@ -511,13 +515,13 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({
           </div>
         </div>
 
-        {/* Head Height & Width (Stamped on picture in bold large text) */}
+        {/* Master Dimension (Master MM) */}
         <div className="p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-zinc-200 flex items-center space-x-2">
-              <span>Actual Design Head Dimensions (Height & Width)</span>
+              <span>Master Dimension (Master MM)</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-gold-500/15 border border-gold-500/30 text-gold-300 font-mono font-medium">
-                Shown In Picture (Big)
+                Picture Text Only (Not in Prompt)
               </span>
             </span>
           </div>
@@ -525,14 +529,14 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-zinc-400 mb-1">
-                Head Height (mm)
+                Master Head Height / Length (mm)
               </label>
               <div className="relative">
                 <input
                   type="number"
                   step="0.1"
-                  value={headHeight}
-                  onChange={(e) => setHeadHeight(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                  value={masterHeight}
+                  onChange={(e) => setMasterHeight(e.target.value === '' ? '' : parseFloat(e.target.value))}
                   placeholder="e.g. 4.9"
                   className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-zinc-700/80 text-white text-xs focus:outline-none focus:border-gold-500 font-mono"
                 />
@@ -542,14 +546,14 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({
 
             <div>
               <label className="block text-xs font-medium text-zinc-400 mb-1">
-                Head Width (mm)
+                Master Head Width (mm)
               </label>
               <div className="relative">
                 <input
                   type="number"
                   step="0.1"
-                  value={headWidth}
-                  onChange={(e) => setHeadWidth(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                  value={masterWidth}
+                  onChange={(e) => setMasterWidth(e.target.value === '' ? '' : parseFloat(e.target.value))}
                   placeholder="e.g. 2.6"
                   className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-zinc-700/80 text-white text-xs focus:outline-none focus:border-gold-500 font-mono"
                 />
@@ -559,9 +563,12 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({
           </div>
 
           <p className="text-[11px] text-gold-300 font-mono">
-            {headHeight && headWidth
-              ? `Picture Badge: 📐 H: ${headHeight} mm   ×   W: ${headWidth} mm`
-              : 'Both dimensions will be stamped directly on every generated picture in large, bold text.'}
+            {masterHeight && masterWidth
+              ? `Picture Stamp: 📐 MASTER: ${masterHeight} × ${masterWidth} mm   |   ✨ ACTUAL: Calculated per design`
+              : 'Master MM is stamped on pictures. Actual size is calculated from each generated design.'}
+          </p>
+          <p className="text-[10px] text-zinc-500">
+            Note: Master MM is stamped onto the generated pictures as text (never included in AI prompts). The actual size is not given as input; it is automatically calculated according to each generated design.
           </p>
         </div>
 

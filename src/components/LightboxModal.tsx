@@ -237,12 +237,14 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
                   <span className="font-semibold text-white capitalize">{variation.setting}</span>
                 </div>
 
-                <div className="flex justify-between items-center p-2.5 rounded-lg bg-zinc-900 border border-zinc-800">
-                  <span className="text-zinc-400 flex items-center space-x-1.5">
-                    <Ruler className="w-3.5 h-3.5 text-zinc-500" />
-                    <span>Estimated Size</span>
+                <div className="flex justify-between items-center p-2.5 rounded-lg bg-zinc-900 border border-gold-500/30">
+                  <span className="text-gold-300 flex items-center space-x-1.5 font-medium">
+                    <Ruler className="w-3.5 h-3.5 text-gold-400" />
+                    <span>Actual Head Dimension</span>
                   </span>
-                  <span className="font-semibold text-white">{variation.sizeMm} mm</span>
+                  <span className="font-bold text-white font-mono">
+                    {variation.actualHeadMm || (variation.sizeMm ? `${variation.sizeMm} mm` : '—')}
+                  </span>
                 </div>
 
                 <div className="flex justify-between items-center p-2.5 rounded-lg bg-zinc-900 border border-zinc-800">

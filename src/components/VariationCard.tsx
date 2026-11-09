@@ -176,12 +176,17 @@ export const VariationCard: React.FC<VariationCardProps> = ({
               <span className="font-medium truncate block capitalize">{variation.setting}</span>
             </div>
 
-            <div className="p-1.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300" title={`Size: ${variation.sizeMm} mm`}>
-              <div className="flex items-center space-x-1 text-zinc-500 mb-0.5">
-                <Ruler className="w-2.5 h-2.5" />
-                <span className="text-[9px] uppercase tracking-wider">Size</span>
+            <div
+              className="p-1.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300"
+              title={variation.actualHeadMm ? `Calculated Actual Head Size: ${variation.actualHeadMm}` : `Size: ${variation.sizeMm} mm`}
+            >
+              <div className="flex items-center space-x-1 text-gold-400/90 mb-0.5">
+                <Ruler className="w-2.5 h-2.5 text-gold-400" />
+                <span className="text-[9px] uppercase tracking-wider font-semibold">Actual Head</span>
               </div>
-              <span className="font-medium truncate block">{variation.sizeMm} mm</span>
+              <span className="font-medium truncate block font-mono text-zinc-100">
+                {variation.actualHeadMm || (variation.sizeMm ? `${variation.sizeMm} mm` : '—')}
+              </span>
             </div>
 
             <div className="p-1.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300" title={`Gold vs Original: ${variation.goldVsOriginal}`}>
