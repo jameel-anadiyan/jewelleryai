@@ -1,17 +1,95 @@
+export interface StampDimensionOptions {
+  height?: number | string;
+  width?: number | string;
+  masterMm?: string;
+  sizeMm?: string;
+}
+
 /**
- * Stretches or renders the Master MM directly within the jewellery sketch image as clean,
- * elegant specification text on a subtle luxury pill badge.
- * This bakes the MM into the picture canvas itself without modifying or polluting AI prompts.
+ * Resolves height and width into clean formatted specification text.
+ */
+export function resolveDimensionText(params?: StampDimensionOptions | string): {
+  heightText: string;
+  widthText: string;
+  combinedText: string;
+} | null {
+  if (!params) return null;
+
+  if (typeof params === 'string') {
+    params = { masterMm: params };
+  }
+
+  let h = params.height !== undefined && params.height !== '' ? String(params.height).trim() : '';
+  let w = params.width !== undefined && params.width !== '' ? String(params.width).trim() : '';
+
+  // If not passed directly as separate fields, parse from masterMm
+  if ((!h || !w) && params.masterMm) {
+    const raw = params.masterMm.trim();
+    // Matches: 4.9 x 2.6 or 4.9 * 2.6 or 4.9 , 2.6 or H: 4.9 W: 2.6
+    const match = raw.match(/([\d.]+)\s*(?:[x×*,|]|by)\s*([\d.]+)/i);
+    if (match) {
+      h = h || match[1];
+      w = w || match[2];
+    } else {
+      const singleMatch = raw.match(/([\d.]+)/);
+      if (singleMatch) {
+        h = h || singleMatch[1];
+      }
+    }
+  }
+
+  // Fallback to variation sizeMm (e.g. "4.9 x 2.6" or "16 x 6")
+  if ((!h || !w) && params.sizeMm) {
+    const match = params.sizeMm.match(/([\d.]+)\s*[x×*]\s*([\d.]+)/i);
+    if (match) {
+      h = h || match[1];
+      w = w || match[2];
+    }
+  }
+
+  if (!h && !w && params.masterMm) {
+    return {
+      heightText: '',
+      widthText: '',
+      combinedText: params.masterMm.trim(),
+    };
+  }
+
+  if (h && w) {
+    const cleanH = h.replace(/mm/gi, '').trim();
+    const cleanW = w.replace(/mm/gi, '').trim();
+    return {
+      heightText: `${cleanH} mm`,
+      widthText: `${cleanW} mm`,
+      combinedText: `H: ${cleanH} mm   ×   W: ${cleanW} mm`,
+    };
+  }
+
+  if (h) {
+    const cleanH = h.replace(/mm/gi, '').trim();
+    return {
+      heightText: `${cleanH} mm`,
+      widthText: '',
+      combinedText: `H: ${cleanH} mm`,
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Draws the actual design head width and height directly onto the jewellery sketch image.
+ * Uses a bold, prominent "little big" luxury specification badge in the bottom area.
+ * Bakes the dimensions into the picture canvas without modifying AI prompts.
  */
 export async function stampMasterMmOnImage(
   imageBase64: string,
-  masterMm?: string
+  options?: StampDimensionOptions | string
 ): Promise<string> {
-  if (!masterMm || !masterMm.trim()) {
+  const resolved = resolveDimensionText(options);
+  if (!resolved || !resolved.combinedText) {
     return imageBase64;
   }
-
-  const mmText = masterMm.trim();
 
   return new Promise((resolve) => {
     const img = new Image();
@@ -32,34 +110,34 @@ export async function stampMasterMmOnImage(
         // Draw original generated jewellery sketch
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-        // Typography settings scaled to image resolution
-        const fontSize = Math.max(20, Math.round(canvas.width * 0.024)); // ~25px on 1024x1024
-        ctx.font = `600 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
+        // Prominent "Little Big" typography scaled to image canvas (38px on 1024x1024)
+        const fontSize = Math.max(28, Math.round(canvas.width * 0.036)); // ~37px on 1024x1024
+        ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
 
-        const displayLabel = mmText.toLowerCase().includes('mm') ? mmText : `${mmText} mm`;
+        const displayLabel = resolved.combinedText;
         const textMetrics = ctx.measureText(displayLabel);
         const textWidth = textMetrics.width;
 
-        const padX = fontSize * 0.7;
-        const padY = fontSize * 0.4;
+        const padX = Math.round(fontSize * 0.85); // ~32px
+        const padY = Math.round(fontSize * 0.5);  // ~19px
         const badgeWidth = textWidth + padX * 2;
         const badgeHeight = fontSize + padY * 2;
 
         // Position: Bottom-Left with luxury margin
-        const margin = Math.round(canvas.width * 0.035); // ~36px from bottom & left
+        const margin = Math.round(canvas.width * 0.04); // ~40px from bottom & left
         const x = margin;
         const y = canvas.height - margin - badgeHeight;
-        const radius = 10;
+        const radius = 14;
 
         ctx.save();
 
-        // Subtle dark translucent pill background with soft shadow
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
-        ctx.shadowBlur = 8;
+        // Luxury dark pill badge with soft drop shadow
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
+        ctx.shadowBlur = 14;
         ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 2;
+        ctx.shadowOffsetY = 4;
 
-        ctx.fillStyle = 'rgba(12, 13, 18, 0.85)';
+        ctx.fillStyle = 'rgba(10, 11, 16, 0.90)';
         ctx.beginPath();
         if (typeof ctx.roundRect === 'function') {
           ctx.roundRect(x, y, badgeWidth, badgeHeight, radius);
@@ -68,16 +146,49 @@ export async function stampMasterMmOnImage(
         }
         ctx.fill();
 
-        // Reset shadow for border
+        // Golden metallic border
         ctx.shadowColor = 'transparent';
-        ctx.strokeStyle = 'rgba(212, 175, 55, 0.75)'; // Soft gold border
-        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = 'rgba(212, 175, 55, 0.90)';
+        ctx.lineWidth = 2.2;
         ctx.stroke();
 
-        // Draw dimension text in bright crisp text
-        ctx.fillStyle = '#FFFFFF';
+        // Render dimension text with gold labels and crisp white values
         ctx.textBaseline = 'middle';
-        ctx.fillText(displayLabel, x + padX, y + badgeHeight / 2 + 1);
+        const startY = y + badgeHeight / 2 + 1;
+
+        if (resolved.heightText && resolved.widthText) {
+          // Draw segmented text: H: [height]  ×  W: [width]
+          let currentX = x + padX;
+
+          // H: (Gold)
+          ctx.fillStyle = '#F5D061';
+          ctx.fillText('H: ', currentX, startY);
+          currentX += ctx.measureText('H: ').width;
+
+          // height value (White)
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillText(resolved.heightText, currentX, startY);
+          currentX += ctx.measureText(resolved.heightText).width;
+
+          // × (Gold / Muted)
+          ctx.fillStyle = 'rgba(212, 175, 55, 0.7)';
+          const separator = '   ×   ';
+          ctx.fillText(separator, currentX, startY);
+          currentX += ctx.measureText(separator).width;
+
+          // W: (Gold)
+          ctx.fillStyle = '#F5D061';
+          ctx.fillText('W: ', currentX, startY);
+          currentX += ctx.measureText('W: ').width;
+
+          // width value (White)
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillText(resolved.widthText, currentX, startY);
+        } else {
+          // Single dimension text in crisp white
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillText(displayLabel, x + padX, startY);
+        }
 
         ctx.restore();
 
@@ -86,7 +197,7 @@ export async function stampMasterMmOnImage(
         const cleanB64 = dataUrl.replace(/^data:image\/png;base64,/, '');
         resolve(cleanB64);
       } catch (err) {
-        console.warn('Failed to stamp Master MM on image:', err);
+        console.warn('Failed to stamp dimensions on image:', err);
         resolve(imageBase64);
       }
     };
@@ -99,4 +210,3 @@ export async function stampMasterMmOnImage(
     img.src = `data:image/png;base64,${cleanInput}`;
   });
 }
-

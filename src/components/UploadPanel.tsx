@@ -23,6 +23,8 @@ export interface AnalysisRequestPayload {
   clusterRhodiumFill: boolean;
   headShapeVariance: boolean;
   masterMm?: string;
+  headHeight?: number | string;
+  headWidth?: number | string;
 }
 
 interface UploadPanelProps {
@@ -49,7 +51,8 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({
   const [quality, setQuality] = useState<'low' | 'medium' | 'high'>('medium');
   const [clusterRhodiumFill, setClusterRhodiumFill] = useState<boolean>(false);
   const [headShapeVariance, setHeadShapeVariance] = useState<boolean>(false);
-  const [masterMm, setMasterMm] = useState<string>('');
+  const [headHeight, setHeadHeight] = useState<number | ''>('');
+  const [headWidth, setHeadWidth] = useState<number | ''>('');
 
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [isDragOver, setIsDragOver] = useState(false);
@@ -187,7 +190,9 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({
         quality,
         clusterRhodiumFill,
         headShapeVariance,
-        masterMm: masterMm.trim(),
+        masterMm: headHeight && headWidth ? `${headHeight} x ${headWidth} mm` : '',
+        headHeight: headHeight !== '' ? headHeight : undefined,
+        headWidth: headWidth !== '' ? headWidth : undefined,
       },
       photoPreview
     );
@@ -506,23 +511,62 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({
           </div>
         </div>
 
-        {/* Secondary parameters: SKU, Stone size, Metal, Master MM */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
-          {/* Master MM */}
-          <div>
-            <label className="block text-xs font-semibold text-zinc-200 mb-1 flex items-center justify-between">
-              <span>Master MM</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded bg-gold-500/15 text-gold-300 font-mono">In Picture</span>
-            </label>
-            <input
-              type="text"
-              value={masterMm}
-              onChange={(e) => setMasterMm(e.target.value)}
-              placeholder="e.g. 4.9 x 2.6 mm"
-              className="w-full px-3.5 py-2 rounded-xl bg-zinc-900/80 border border-zinc-700/80 text-white text-xs focus:outline-none focus:border-gold-500 font-mono"
-            />
-            <p className="text-[10px] text-zinc-500 mt-1">Shows inside the picture as text</p>
+        {/* Head Height & Width (Stamped on picture in bold large text) */}
+        <div className="p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-zinc-200 flex items-center space-x-2">
+              <span>Actual Design Head Dimensions (Height & Width)</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-gold-500/15 border border-gold-500/30 text-gold-300 font-mono font-medium">
+                Shown In Picture (Big)
+              </span>
+            </span>
           </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1">
+                Head Height (mm)
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  step="0.1"
+                  value={headHeight}
+                  onChange={(e) => setHeadHeight(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                  placeholder="e.g. 4.9"
+                  className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-zinc-700/80 text-white text-xs focus:outline-none focus:border-gold-500 font-mono"
+                />
+                <span className="absolute right-3 top-2 text-xs text-zinc-500 pointer-events-none">mm</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1">
+                Head Width (mm)
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  step="0.1"
+                  value={headWidth}
+                  onChange={(e) => setHeadWidth(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                  placeholder="e.g. 2.6"
+                  className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-zinc-700/80 text-white text-xs focus:outline-none focus:border-gold-500 font-mono"
+                />
+                <span className="absolute right-3 top-2 text-xs text-zinc-500 pointer-events-none">mm</span>
+              </div>
+            </div>
+          </div>
+
+          <p className="text-[11px] text-gold-300 font-mono">
+            {headHeight && headWidth
+              ? `Picture Badge: 📐 H: ${headHeight} mm   ×   W: ${headWidth} mm`
+              : 'Both dimensions will be stamped directly on every generated picture in large, bold text.'}
+          </p>
+        </div>
+
+        {/* Secondary parameters: SKU, Stone size, Metal */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
 
           {/* SKU */}
           <div>

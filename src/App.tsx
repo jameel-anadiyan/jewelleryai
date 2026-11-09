@@ -206,9 +206,12 @@ export const App: React.FC = () => {
       }
 
       let finalBase64 = data.imageBase64;
-      if (targetJob.masterMm) {
-        finalBase64 = await stampMasterMmOnImage(finalBase64, targetJob.masterMm);
-      }
+      finalBase64 = await stampMasterMmOnImage(finalBase64, {
+        height: targetJob.headHeight,
+        width: targetJob.headWidth,
+        masterMm: targetJob.masterMm,
+        sizeMm: currentVar?.sizeMm,
+      });
 
       const updatedVar: Variation = {
         ...(currentVar || {
@@ -335,6 +338,8 @@ export const App: React.FC = () => {
         clusterRhodiumFill: Boolean(payload.clusterRhodiumFill ?? data.clusterRhodiumFill),
         headShapeVariance: Boolean(payload.headShapeVariance ?? data.headShapeVariance),
         masterMm: payload.masterMm || '',
+        headHeight: payload.headHeight,
+        headWidth: payload.headWidth,
         original: data.original,
         variations: initialVariations,
         createdAt: Date.now(),
@@ -389,7 +394,12 @@ export const App: React.FC = () => {
     const updatedVariations = await Promise.all(
       activeJob.variations.map(async (v) => {
         if (v.status === 'done' && v.imageBase64) {
-          const reStamped = await stampMasterMmOnImage(v.imageBase64, cleanMm);
+          const reStamped = await stampMasterMmOnImage(v.imageBase64, {
+            height: activeJob.headHeight,
+            width: activeJob.headWidth,
+            masterMm: cleanMm,
+            sizeMm: v.sizeMm,
+          });
           return { ...v, imageBase64: reStamped };
         }
         return v;
