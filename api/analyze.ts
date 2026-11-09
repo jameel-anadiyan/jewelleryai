@@ -112,17 +112,22 @@ function getAnalysisSystemPrompt(
 MOTIF & GEOMETRY LOCK (follow strictly):
 1. Before designing, name the reference's core motif and geometry in a few words, for example "geometric square", "heart / love", "infinity", "flower", "butterfly", "evil eye", "star and moon", "leaf", "knot", or "crossline X". Also list its signature details. Return this in original.motif.
 2. Return EXACTLY 10 distinct, production-viable variations numbered 1 to 10.
-3. CRITICAL MANDATORY REQUIREMENT — USE GEOMETRY OF SAME TYPE & MAINTAIN HEAD SIZE:
-   All 10 variations MUST strictly share and preserve the EXACT SAME GEOMETRIC TYPE and EXACT HEAD SIZE as the reference piece!
-   - Maintain the exact head size of the reference image: the centerpiece head/cluster must match the reference photo's head scale and proportion precisely — do not make it larger or smaller.
-   - If the reference has a geometric square, rectangular, or cushion head, ALL 10 variations must maintain that geometric square / rectangular centerpiece silhouette and head size.
-   - If the reference is an oval, round cluster, or floral motif, all 10 variations must strictly preserve that geometric type and head size.
-   - Vary the shank architecture, split-wire contours, bypass curves, gallery openwork, shoulder diamond rows, and cluster seating while KEEPING the centerpiece head in the SAME GEOMETRIC TYPE and SAME HEAD SIZE.
+3. CRITICAL MANDATORY REQUIREMENT — HEAD FOCUS, STRICT DIAMOND COUNT & GEOMETRIC WIRE ADD-ONS:
+   - STRICT DIAMOND COUNT: Every variation MUST use EXACTLY ${count} diamonds — no more, no less. Every diamond must be accounted for and placed with precision.
+   - HEAD-FOCUSED DESIGN: The centerpiece head is the hero of the design. Maintain the exact head size and geometric type (e.g. square geometry) of the reference image.
+   - CLUSTER ${count} STONES IN DIFFERENT WAYS: Maintain the reference piece's locked geometry, but arrange the exact ${count} diamonds in 10 DIFFERENT, creative cluster configurations (e.g. tight grid cluster, diagonal rhombus cluster, linear center row, stepped quadrant, floating cluster inside open frame, corner-seated cluster, staggered layout, offset cluster, etc.).
+   - GEOMETRIC GOLD WIRE ADD-ONS: Enhance each variation with stylish gold wire add-ons complementing the locked geometry:
+     * Nested geometric gold wireframes (e.g. square wire-in-square, double wire borders)
+     * Gold wire bypass curves wrapping dynamically around the square/geometric head
+     * Stepped geometric wire tiers and openwork filigree under-galleries
+     * Split-wire shoulders connecting dynamically to the head corners
+     * Articulated wire halo outlines and geometric wire accents
+     * Lightweight fine wire (~1.0–1.2 mm) keeping the piece open, elegant, and production-viable.
 4. Original designs only: no brand look-alikes, no logos or text.
 
 Rules for every variation:
-- EXACTLY ${count} diamonds per piece, all the same size as the original. No extra accent stones. No coloured stones unless the original has them.
-- HEAD SIZE: Maintain the exact head size and centerpiece scale of the reference image.
+- EXACTLY ${count} diamonds per piece, all the same size as the original. No extra accent stones. No coloured stones unless the original has them. Every single diamond must be clearly drawn and countable.
+- HEAD FOCUS: Centerpiece head is the focal star. Maintain the exact head size and centerpiece scale of the reference image.
 - Lightweight: thin wire (about 1.0-1.2 mm), open and airy shapes, no heavy solid metal.
 - Same design family: same mood and proportions, two-tone if the original is two-tone, same band or earring-back type.${clusterRhodiumInstruction}${headShapeVarianceInstruction}
 
@@ -291,39 +296,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     // If fewer than 10 were returned by the LLM, synthesize remaining to guarantee 10
-    const geometricTreatments = [
-      'Contour Wire Shank',
-      'Dual-Rail Bypass Band',
-      'Cathedral Raised Setting',
-      'Openwork Filigree Gallery',
-      'Knife-Edge Tapered Band',
-      'Split-Shoulder Architecture',
-      'Interlocking Wrap Frame',
-      'Floating Pavé Under-Gallery',
-      'Articulated Stepped Shoulders',
-      'Sleek Tension Crossover',
+    const geometricClusterStyles = [
+      { name: 'Grid Cluster', layout: `Tight 2x2 grid cluster of ${perPieceCount} diamonds`, addons: 'nested square gold wire border' },
+      { name: 'Rhombus Cluster', layout: `Diagonal rhombus-aligned cluster of ${perPieceCount} diamonds`, addons: 'stepped square wire collar' },
+      { name: 'Linear Bar Cluster', layout: `Central linear bar cluster of ${perPieceCount} diamonds`, addons: 'dual-rail gold wire bypass band' },
+      { name: 'Stepped Quadrant', layout: `Stepped multi-level quadrant cluster of ${perPieceCount} diamonds`, addons: 'openwork wire gallery with split shoulders' },
+      { name: 'Floating Cluster', layout: `Floating central cluster of ${perPieceCount} diamonds`, addons: 'outer square gold wire halo outline' },
+      { name: 'Corner-Accented Head', layout: `Corner-accented geometric cluster of ${perPieceCount} diamonds`, addons: 'cathedral-raised gold wire arms' },
+      { name: 'Offset Wrap Cluster', layout: `Staggered offset cluster of ${perPieceCount} diamonds`, addons: 'asymmetric gold wire wrapping around head' },
+      { name: 'Tiered Geometric Head', layout: `Concentric framed cluster of ${perPieceCount} diamonds`, addons: 'geometric stepped gold wire tiers' },
+      { name: 'Cross-Point Cluster', layout: `Cross-aligned cluster of ${perPieceCount} diamonds`, addons: 'split-wire knife-edge gold shank' },
+      { name: 'Tilted Princess Head', layout: `Tilted princess-quadrant cluster of ${perPieceCount} diamonds`, addons: 'sculpted gold wire loop accents' },
     ];
 
     while (finalVariations.length < 10) {
       const idx = finalVariations.length + 1;
-      const treatment = geometricTreatments[(idx - 1) % geometricTreatments.length];
+      const style = geometricClusterStyles[(idx - 1) % geometricClusterStyles.length];
       finalVariations.push({
         index: idx,
-        name: `${original.motif || 'Geometric'} ${treatment}`,
-        description: `Refined variation maintaining the exact ${original.motif || 'master'} geometry with ${treatment.toLowerCase()}.`,
-        motifTreatment: `${original.motif || 'Master'} geometry with ${treatment.toLowerCase()}`,
+        name: `${original.motif || 'Geometric'} ${style.name}`,
+        description: `Refined centerpiece head with ${style.layout.toLowerCase()} framed by ${style.addons}.`,
+        motifTreatment: `${original.motif || 'Master'} geometry with ${style.addons}`,
         stoneCount: perPieceCount,
         stoneLayout: isClusterRhodium
-          ? `Tight cluster of ${perPieceCount} diamonds with white rhodium gap fill`
-          : `${perPieceCount} round diamonds placed in ${original.motif || 'geometric'} setting`,
+          ? `${style.layout} with white rhodium gap fill`
+          : style.layout,
         setting: isClusterRhodium
           ? 'Tight cluster with white rhodium gap fill'
           : 'Micro-prong',
         sizeMm: '16 x 5',
         goldVsOriginal: 'about the same',
         imagePrompt: isClusterRhodium
-          ? `Professional fine jewellery design sketch of ${original.motif || 'geometric'} piece with ${treatment.toLowerCase()} and ${perPieceCount} round diamonds in a dense cluster setting filled with bright-cut white rhodium.`
-          : `Professional fine jewellery design sketch of ${original.motif || 'geometric'} piece with ${treatment.toLowerCase()} and ${perPieceCount} round brilliant diamonds.`,
+          ? `Professional fine jewellery design sketch of ${original.motif || 'geometric'} head featuring ${style.layout} and ${style.addons}, with bright-cut white rhodium filling diamond gaps.`
+          : `Professional fine jewellery design sketch of ${original.motif || 'geometric'} head featuring ${style.layout} and ${style.addons}.`,
       });
     }
 

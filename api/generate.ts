@@ -101,14 +101,17 @@ function buildImagePrompt(
   const cleanMotif = (motif || '').trim() || 'original jewellery motif';
   const cleanTreatment = (variation.motifTreatment || '').trim() || variation.name;
 
-  return `CRITICAL SCALE REQUIREMENT: Maintain the exact same head size and centerpiece proportions as shown in the reference image. The centerpiece head must match the reference photo's head size precisely.
+  return `CRITICAL MANDATORY INSTRUCTIONS:
+1. STRICT DIAMOND COUNT: EXACTLY ${count} round brilliant diamonds. No more, no less. Draw every single one of the ${count} diamonds distinctly with clear facet lines so all ${count} stones are plainly visible and countable.
+2. HEAD-FOCUSED DESIGN: The centerpiece head is the hero of the design. Maintain the exact head size and locked geometry (e.g. geometric square) of the reference image. Do not distort or resize the head.
+3. CLUSTER & GOLD WIRE ADD-ONS: The ${count} diamonds must be clustered as: ${variation.stoneLayout}.${clusterRhodiumText} Frame and enhance the head with ${cleanMotif} geometric gold wire add-ons (such as nested square wireframes, stepped gold wire tiers, bypass wire arms, or split-wire shoulders in ~1.0-1.2 mm thin gold wire).
+
 Use the attached product photo as the reference for head size, scale, metal colours and design family. Draw ONE new jewellery design that is clearly distinct and unique.
 Motif: ${cleanMotif}. Keep it instantly recognisable in this design (${cleanTreatment}). Do not add any other motif.
-Centerpiece Head: Maintain the exact head size and silhouette geometry of the reference image.
+Centerpiece Head: Focus on the head design maintaining the reference geometry and head size, featuring gold wire accents.
 Design: ${variation.name} - ${variation.description}
-Distinctive Shape & Architecture: ${variation.imagePrompt}${headShapeText}
-Stones: EXACTLY ${count} round brilliant diamonds, uniquely arranged as: ${variation.stoneLayout}.${clusterRhodiumText} Draw every diamond clearly with facet lines so each one can be counted. No other stones.
-Setting: ${variation.setting}.${isCluster ? ' Stones seated in tight cluster or line cluster with white rhodium filling diamond gaps.' : ''} Lightweight construction in thin wire (~1.0-1.2 mm).
+Distinctive Architecture: ${variation.imagePrompt}${headShapeText}
+Stones: EXACTLY ${count} round brilliant diamonds. Setting: ${variation.setting}. Lightweight construction in thin wire (~1.0-1.2 mm).
 Style: professional jewellery design sketch, fine pencil and ink lines on white paper with soft watercolour shading in gold and white gold. Same viewing angle as the reference photo. One design only, centred, plain white background, no text, no hands, no props.`;
 }
 
